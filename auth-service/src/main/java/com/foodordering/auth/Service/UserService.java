@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.foodordering.auth.Entity.user;
 import com.foodordering.auth.Repo.UserRepo;
+import com.foodordering.auth.dto.AuthResponse;
+import com.foodordering.auth.exception.InvalidPasswordException;
+import com.foodordering.auth.exception.UserNotFoundException;
 
 @Service
 public class UserService {
@@ -30,18 +33,19 @@ public class UserService {
         return "registered";
 }
 
-    public String loginService(user u){
+    public AuthResponse loginService(user u){
         user dbUser = Repo.findByUsername(u.getUsername());
 
         if (dbUser == null) {
-            return "user not found";
+            throw new UserNotFoundException("User not found");
         }
 
-    if (!encoder.matches(u.getPassword(), dbUser.getPassword())) {
-            return "wrong password";
+        if (!encoder.matches(u.getPassword(), dbUser.getPassword())) {
+            throw new InvalidPasswordException("Wrong password");
         }
 
-         return jwtService.generateToken(u.getUsername());
+        String token = jwtService.generateToken(u.getUsername());
 
+        return new AuthResponse("login success", token);
     }
 }
