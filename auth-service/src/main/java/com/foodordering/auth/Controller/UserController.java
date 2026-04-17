@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.foodordering.auth.Entity.user;
 import com.foodordering.auth.Service.UserService;
+import com.foodordering.auth.dto.AuthResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,12 +27,22 @@ public class UserController {
     
 
     @PostMapping("/login")
-    public String login(@RequestBody user user) {
+    public AuthResponse login(@RequestBody user user) {
         return userService.loginService(user);
     }
     
     @GetMapping("/test")
     public String test() {
         return "working";
+    }
+
+    @GetMapping("/admin/test")
+    public String adminTest() {
+        return "admin only";
+    }
+
+    @GetMapping("/user/test")
+    public String userTest() {
+        return "user or admin";
     }
 }
