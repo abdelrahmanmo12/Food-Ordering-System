@@ -10,7 +10,7 @@ import com.foodordering.auth.Repo.RefreshTokenRepo;
 import com.foodordering.auth.Repo.UserRepo;
 
 import com.foodordering.auth.dto.RegisterRequest;
-
+import com.foodordering.auth.exception.UserNotFoundException;
 import com.foodordering.auth.exception.UsernameAlreadyExistsException;
 
 
@@ -41,5 +41,12 @@ public class UserService {
         userRepo.save(newUser);
 
         return "registered";
+    }
+
+    public String PromotionToOwner(String username){
+        user u = userRepo.findByUsername(username).orElseThrow(()-> new UserNotFoundException("user not found"));
+        u.setRole(Role.OWNER);
+        userRepo.save(u);
+        return "User promoted to OWNER";
     }
 }

@@ -9,13 +9,12 @@ import com.foodordering.auth.dto.AuthResponse;
 import com.foodordering.auth.dto.LoginRequest;
 import com.foodordering.auth.dto.RefreshRequest;
 import com.foodordering.auth.dto.RegisterRequest;
-
 import jakarta.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -67,4 +66,10 @@ public class UserController {
     public String userTest() {
         return "user or admin";
     }
+
+    @PostMapping("/make-owner/{username}")
+    public String makeOwner(@PathVariable String username) {
+        return userService.PromotionToOwner(username);                
+    }
+    
 }
