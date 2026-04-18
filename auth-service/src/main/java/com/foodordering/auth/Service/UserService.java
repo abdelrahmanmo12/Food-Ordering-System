@@ -1,22 +1,24 @@
 package com.foodordering.auth.Service;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import com.foodordering.auth.Entity.Role;
 import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Repo.RefreshTokenRepo;
 import com.foodordering.auth.Repo.UserRepo;
-import com.foodordering.auth.dto.AuthResponse;
-import com.foodordering.auth.exception.InvalidPasswordException;
-import com.foodordering.auth.exception.UserNotFoundException;
+
+import com.foodordering.auth.dto.RegisterRequest;
+
+import com.foodordering.auth.exception.UsernameAlreadyExistsException;
+
 
 @Service
 public class UserService {
 
     @Autowired
-    UserRepo Repo;
+    UserRepo userRepo;
     
     @Autowired
     PasswordEncoder encoder;
@@ -24,28 +26,20 @@ public class UserService {
     @Autowired
     JwtService jwtService;
 
-    @PostMapping("/register")
-    public String registerService(@RequestBody user user) {
+    @Autowired
+    RefreshTokenRepo refreshTokenRepo;
 
-        user.setPassword(encoder.encode(user.getPassword())); 
-        Repo.save(user);
+    public String registerService(@RequestBody RegisterRequest user) {
+
+        if (userRepo.findByUsername(user.getUsername()).isPresent()) {
+            throw new UsernameAlreadyExistsException("Username already taken");
+        }
+        user newUser = new user();
+        newUser.setUsername(user.getUsername());
+        newUser.setRole(Role.USER); 
+        newUser.setPassword(encoder.encode(user.getPassword())); 
+        userRepo.save(newUser);
 
         return "registered";
-}
-
-    public AuthResponse loginService(user u){
-        user dbUser = Repo.findByUsername(u.getUsername());
-
-        if (dbUser == null) {
-            throw new UserNotFoundException("User not found");
-        }
-
-        if (!encoder.matches(u.getPassword(), dbUser.getPassword())) {
-            throw new InvalidPasswordException("Wrong password");
-        }
-
-        String token = jwtService.generateToken(u.getUsername());
-
-        return new AuthResponse("login success", token);
     }
 }

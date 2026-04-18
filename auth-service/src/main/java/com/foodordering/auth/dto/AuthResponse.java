@@ -3,18 +3,24 @@ package com.foodordering.auth.dto;
 public class AuthResponse {
 
     private String message;
-    private String token;
+    private String accessToken;
+    private String refreshToken;
 
-    public AuthResponse(String message, String token) {
+    public AuthResponse(String message, String accessToken, String refreshToken) {
         this.message = message;
-        this.token = token;
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
     }
 
     public String getMessage() {
         return message;
     }
 
-    public String getToken() {
-        return token;
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getRefreshToken() {
+        return refreshToken;
     }
 }
