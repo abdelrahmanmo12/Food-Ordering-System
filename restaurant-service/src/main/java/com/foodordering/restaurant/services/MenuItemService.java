@@ -7,7 +7,11 @@ import com.foodordering.restaurant.repository.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class MenuItemService {
@@ -59,5 +63,34 @@ public class MenuItemService {
     }
     public List<MenuItem> getOffers() {
         return menuItemRepository.findByDiscountGreaterThan(0);
+    }
+
+    public MenuItem getItemByRestaurantAndName(Long restaurantId, String itemName) {
+        return menuItemRepository.findByRestaurantIdAndNameIgnoreCase(restaurantId, itemName);
+    }
+    public List<MenuItem> addBulkMenuItems(Long restaurantId, List<MenuItem> items) {
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        items.forEach(item -> item.setRestaurant(restaurant));
+
+        return menuItemRepository.saveAll(items);
+    }
+
+    public Map<String, List<MenuItem>> getMenuGroupedByCategory(Long restaurantId) {
+        List<MenuItem> items = menuItemRepository.findByRestaurantId(restaurantId);
+
+        if (items.isEmpty()) {
+            throw new RuntimeException("No menu items found for this restaurant");
+        }
+
+        // Group items by category automatically
+        Map<String, List<MenuItem>> menu = new LinkedHashMap<>();
+        for (MenuItem item : items) {
+            menu.computeIfAbsent(item.getCategory(), k -> new ArrayList<>()).add(item);
+        }
+
+        return menu;
     }
 }

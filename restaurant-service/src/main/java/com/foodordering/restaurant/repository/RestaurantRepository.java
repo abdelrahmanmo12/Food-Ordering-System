@@ -16,4 +16,9 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     Restaurant save(Restaurant restaurant);
 
     void deleteById(Long id);
+
+    Optional<Restaurant> findByName(String name);
+    // 🔍 search by partial name (LIKE %name%)
+    List<Restaurant> findByNameContainingIgnoreCase(String name);
+
 }

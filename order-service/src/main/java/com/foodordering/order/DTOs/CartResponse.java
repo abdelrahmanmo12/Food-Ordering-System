@@ -9,6 +9,9 @@ import java.util.List;
 @Builder
 public class CartResponse {
     private String phone;
+    private String restaurantName;  // ← make sure this exists
     private List<OrderItem> items;
     private double totalPrice;
+    private String message;
+
 }

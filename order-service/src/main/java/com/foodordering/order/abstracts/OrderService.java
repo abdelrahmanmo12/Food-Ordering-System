@@ -12,6 +12,10 @@ public interface OrderService {
 
     void cancelOrder(String id);
 
+    CartResponse addToCart(String phone, String itemName, int quantity, Long restaurantId);
+
+    CartResponse addToCart(String phone, List<CartItemRequest> items, String restaurantName);
+
     // CART
     com.foodordering.order.DTOs.CartResponse getCart(String phone);
     com.foodordering.order.DTOs.CartResponse addToCart(String phone, String itemName, int quantity, String restaurantName);

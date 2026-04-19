@@ -23,6 +23,7 @@ public class MenuItem {
     private boolean available = true;
     @Setter
     private double discount;
+    private int stock;  // number of items available
 
 
     @Setter

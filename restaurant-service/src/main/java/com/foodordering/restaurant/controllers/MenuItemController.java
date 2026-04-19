@@ -1,10 +1,12 @@
 package com.foodordering.restaurant.controllers;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.services.MenuItemService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -39,9 +41,31 @@ public class MenuItemController {
     public List<MenuItem> getByCategory(@PathVariable String category) {
         return menuItemService.getByCategory(category);
     }
+    @GetMapping("/item")
+    public MenuItem getItem(
+            @RequestParam Long restaurantId,
+            @RequestParam String itemName
+    ) {
+        return menuItemService.getItemByRestaurantAndName(restaurantId, itemName);
+    }
 
     @GetMapping("/offers")
     public List<MenuItem> getOffers() {
         return menuItemService.getOffers();
+    }
+
+    // Add multiple items at once
+    @PostMapping("/bulk/{restaurantId}")
+    public ResponseEntity<List<MenuItem>> addBulkItems(
+            @PathVariable Long restaurantId,
+            @RequestBody List<MenuItem> items) {
+        return ResponseEntity.ok(menuItemService.addBulkMenuItems(restaurantId, items));
+    }
+
+    // Get full menu grouped by category
+    @GetMapping("/{restaurantId}/menu")
+    public ResponseEntity<Map<String, List<MenuItem>>> getFullMenu(
+            @PathVariable Long restaurantId) {
+        return ResponseEntity.ok(menuItemService.getMenuGroupedByCategory(restaurantId));
     }
 }
