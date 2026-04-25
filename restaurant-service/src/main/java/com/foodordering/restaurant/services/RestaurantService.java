@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
-import java.util.Optional;
 @Service
 public class RestaurantService {
 
@@ -21,7 +20,9 @@ public class RestaurantService {
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
     }
 
-    public Restaurant addRestaurant(Restaurant restaurant) {
+    public Restaurant addRestaurant(Restaurant restaurant, Long userId) {
+        restaurant.setOwner_id(userId);
+
         return restaurantRepository.save(restaurant);
     }
 

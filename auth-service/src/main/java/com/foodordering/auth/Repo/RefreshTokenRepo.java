@@ -9,5 +9,6 @@ import com.foodordering.auth.Entity.RefreshToken;
 public interface RefreshTokenRepo extends JpaRepository<RefreshToken, Long> {
     Optional<RefreshToken> findByToken(String token);
 
-    void deleteByUsername(String username);
+    void deleteByEmail(String email);
+
 }

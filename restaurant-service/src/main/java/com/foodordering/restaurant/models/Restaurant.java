@@ -23,12 +23,27 @@ public class Restaurant {
 
     @Setter
     private boolean active = true;
+    
+    @Setter
+    private boolean pending = true;
+    
+    private Long owner_id;
+    
+
+
+
+    public Long getOwner_id() {
+        return owner_id;
+    }
+
+    public void setOwner_id(Long owner_id) {
+        this.owner_id = owner_id;
+    }
 
     @Setter
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
     private List<MenuItem> menuItems;
 
-    // ===== GETTERS & SETTERS =====
 
     public Long getId() {
         return id;

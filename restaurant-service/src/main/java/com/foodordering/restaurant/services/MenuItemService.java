@@ -21,10 +21,16 @@ public class MenuItemService {
     //  Add Menu Item
     public MenuItem addMenuItem(Long restaurantId, MenuItem item) {
 
+
+
+        if(menuItemRepository.existsByNameAndRestaurant_Id(item.getName(), restaurantId)){
+            throw new RuntimeException("Menu item already exists");
+        }
+
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
-        item.setRestaurant(restaurant); // VERY IMPORTANT
+        item.setRestaurant(restaurant); 
 
         return menuItemRepository.save(item);
     }

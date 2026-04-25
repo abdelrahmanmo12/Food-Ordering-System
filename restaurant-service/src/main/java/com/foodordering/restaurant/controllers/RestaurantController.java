@@ -24,8 +24,8 @@ public class RestaurantController {
 
 
     @PostMapping
-    public Restaurant add(@RequestBody Restaurant restaurant) {
-        return restaurantService.addRestaurant(restaurant);
+    public Restaurant add(@RequestBody Restaurant restaurant , @RequestHeader("userId") Long userId) {
+        return restaurantService.addRestaurant(restaurant,userId);
     }
 
     @PutMapping("/{id}")
