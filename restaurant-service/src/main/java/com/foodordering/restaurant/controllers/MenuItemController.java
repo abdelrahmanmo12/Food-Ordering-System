@@ -12,7 +12,7 @@ import java.util.List;
 public class MenuItemController {
 
     @Autowired
-    private MenuItemService menuItemService;
+    private MenuItemService menuItemService;        
 
     @PostMapping("/{restaurantId}")
     public MenuItem addItem(@PathVariable Long restaurantId,

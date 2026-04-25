@@ -2,19 +2,24 @@ package com.foodordering.auth.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.validation.annotation.Validated;
 
-import com.foodordering.auth.Entity.Role;
 import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Enum.AccountStatus;
+import com.foodordering.auth.Enum.Role;
+import com.foodordering.auth.Jwt.JwtService;
 import com.foodordering.auth.Repo.RefreshTokenRepo;
 import com.foodordering.auth.Repo.UserRepo;
-
-import com.foodordering.auth.dto.RegisterRequest;
+import com.foodordering.auth.dto.Requests.RegisterRequest;
 import com.foodordering.auth.exception.UserNotFoundException;
 import com.foodordering.auth.exception.UsernameAlreadyExistsException;
 
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+
 
 @Service
+@Validated 
 public class UserService {
 
     @Autowired
@@ -29,22 +34,41 @@ public class UserService {
     @Autowired
     RefreshTokenRepo refreshTokenRepo;
 
-    public String registerService(@RequestBody RegisterRequest user) {
+    @Transactional
+    public String registerCustomer(@Valid RegisterRequest user) {
 
-        if (userRepo.findByUsername(user.getUsername()).isPresent()) {
-            throw new UsernameAlreadyExistsException("Username already taken");
+        if (userRepo.findByEmail(user.getEmail()).isPresent()) {
+            throw new UsernameAlreadyExistsException("Email already taken");
         }
         user newUser = new user();
-        newUser.setUsername(user.getUsername());
-        newUser.setRole(Role.USER); 
+        newUser.setEmail(user.getEmail());
+        newUser.setRole(Role.USER);
+        newUser.setStatus(AccountStatus.ACTIVE);
         newUser.setPassword(encoder.encode(user.getPassword())); 
         userRepo.save(newUser);
 
         return "registered";
     }
 
-    public String PromotionToOwner(String username){
-        user u = userRepo.findByUsername(username).orElseThrow(()-> new UserNotFoundException("user not found"));
+    @Transactional
+    public String registerOwner(@Valid RegisterRequest user) {
+
+        if (userRepo.findByEmail(user.getEmail()).isPresent()) {
+            throw new UsernameAlreadyExistsException("Email already taken");
+        }
+        user newUser = new user();
+        newUser.setEmail(user.getEmail());
+        newUser.setRole(Role.OWNER); 
+        newUser.setStatus(AccountStatus.PENDING);
+        newUser.setPassword(encoder.encode(user.getPassword())); 
+        userRepo.save(newUser);
+
+        return "registered";
+    }
+    
+
+    public String PromotionToOwner(String email){
+        user u = userRepo.findByEmail(email).orElseThrow(()-> new UserNotFoundException("user not found"));
         u.setRole(Role.OWNER);
         userRepo.save(u);
         return "User promoted to OWNER";

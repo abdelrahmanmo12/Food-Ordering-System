@@ -1,17 +1,29 @@
 package com.foodordering.auth.Service;
 
+
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import com.foodordering.auth.Entity.RefreshToken;
 import com.foodordering.auth.Entity.user;
-import com.foodordering.auth.Repo.RefreshTokenRepo;
+import com.foodordering.auth.Enum.AccountStatus;
+import com.foodordering.auth.Enum.Role;
+import com.foodordering.auth.Jwt.JwtService;
+import com.foodordering.auth.Jwt.RefreshTokenService;
 import com.foodordering.auth.Repo.UserRepo;
-import com.foodordering.auth.dto.AuthResponse;
-import com.foodordering.auth.dto.LoginRequest;
-import com.foodordering.auth.dto.RefreshRequest;
-import com.foodordering.auth.exception.InvalidPasswordException;
+import com.foodordering.auth.dto.Requests.LoginRequest;
+import com.foodordering.auth.dto.Requests.RefreshRequest;
+import com.foodordering.auth.dto.Response.LoginResponse;
+import com.foodordering.auth.dto.Response.RefreshTokenResponse;
+import com.foodordering.auth.dto.Response.ValidationResponse;
 import com.foodordering.auth.exception.UserNotFoundException;
 
 import jakarta.transaction.Transactional;
@@ -21,50 +33,91 @@ public class AuthService {
 
     @Autowired
     UserRepo userRepo;
- 
-    @Autowired
-    PasswordEncoder encoder;
 
     @Autowired
     JwtService jwtService;
 
     @Autowired
-    RefreshTokenRepo refreshTokenRepo;
-
-    @Autowired
     RefreshTokenService refreshTokenService;
 
+    @Autowired
+    AuthenticationManager authenticationManager;
+
     @Transactional
-    public AuthResponse login(LoginRequest request){
+    public LoginResponse login(LoginRequest request) {
 
-        user dbUser = userRepo.findByUsername(request.getUsername())
-            .orElseThrow(() -> new UserNotFoundException("User not found"));
+        user dbUser = userRepo.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        if (!encoder.matches(request.getPassword(), dbUser.getPassword())) {
-            throw new InvalidPasswordException("Wrong password");
+        if (dbUser.getStatus() == AccountStatus.BANNED) {
+            throw new DisabledException("Account is banned");
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException("Incorrect email or password");
+        } catch (DisabledException e) {
+            throw new RuntimeException("Your account is currently disabled");
         }
 
         String accessToken = jwtService.generateToken(dbUser);
-        String refreshToken = refreshTokenService.createRefreshToken(dbUser.getUsername());
+        String refreshToken = refreshTokenService.createRefreshToken(dbUser.getEmail());
 
-        return new AuthResponse("login success", accessToken, refreshToken);
+        if (dbUser.getStatus() == AccountStatus.REJECTED) {
+            return new LoginResponse(accessToken, dbUser.getRole().name(), dbUser.getUser_id(), refreshToken,
+                    "SHOW_REJECTION_AND_EDIT");
+        }
+
+
+        if (dbUser.getRole() == Role.OWNER && dbUser.getStatus() == AccountStatus.PENDING) {
+            return new LoginResponse(accessToken, dbUser.getRole().name(), dbUser.getUser_id(), refreshToken,
+                    "GO_TO_COMPLETE_PROFILE");
+        }
+
+        return new LoginResponse(accessToken, dbUser.getRole().name(), dbUser.getUser_id(), refreshToken,
+                "Login Successful");
     }
 
     @Transactional
-    public void logout(String username){
-        refreshTokenService.deleteByUsername(username);
+    public void logout(String email) {
+        refreshTokenService.deleteByEmail(email);
     }
-
-
-    public AuthResponse refreshToken(RefreshRequest request) {
+    @Transactional
+    public RefreshTokenResponse refreshToken(RefreshRequest request) {
 
         RefreshToken rt = refreshTokenService.validate(request.getRefreshToken());
 
-        user user = userRepo.findByUsername(rt.getUsername())
-            .orElseThrow(() -> new UserNotFoundException("User not found"));
+        user user = userRepo.findByEmail(rt.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
 
         String newAccessToken = jwtService.generateToken(user);
 
-        return new AuthResponse("refreshed", newAccessToken, null);
+        return new RefreshTokenResponse(request.getRefreshToken(), newAccessToken);
+    }
+
+    
+    public ResponseEntity<?> validateToken(String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Header");
+        }
+
+        String token = authHeader.substring(7);
+
+        Map<String, Object> result = jwtService.validateAndGetClaims(token);
+
+        if (!(boolean) result.get("isValid")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("status", 401, "message", "Invalid token"));
+        }
+
+        return ResponseEntity.ok(new ValidationResponse(
+                (boolean) result.get("isValid"),
+                (String) result.get("role"),
+                (String) result.get("status"),
+                (Long) result.get("accountId")
+        ));
     }
 }

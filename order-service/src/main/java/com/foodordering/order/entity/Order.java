@@ -1,36 +1,47 @@
 package com.foodordering.order.entity;
 
-import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 @Document(collection = "orders")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class Order {
 
     @Id
     private String id;
 
-    private String customerName;
-    private String phone;
-    private String address;
-
+    private String userId;
     private String restaurantId;
-    private String restaurantName;
-
-    private List<com.foodordering.order.entity.OrderItem> items;
-
     private double totalPrice;
 
-    @Setter
-    private com.foodordering.order.entity.OrderStatus status;
+    public String getId() {
+        return id;
+    }
 
-    private LocalDateTime createdAt;
+    public void setId(String id) {
+        this.id = id;
+    }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getRestaurantId() {
+        return restaurantId;
+    }
+
+    public void setRestaurantId(String restaurantId) {
+        this.restaurantId = restaurantId;
+    }
+
+    public double getTotalPrice() {
+        return totalPrice;
+    }
+
+    public void setTotalPrice(double totalPrice) {
+        this.totalPrice = totalPrice;
+    }
 }

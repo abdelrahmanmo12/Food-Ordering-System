@@ -4,6 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Setter;
 
+
+@Table(
+    uniqueConstraints = @UniqueConstraint(columnNames = {"name", "restaurant_id"})
+)
 @Entity
 public class MenuItem {
 
@@ -22,8 +26,7 @@ public class MenuItem {
     @Setter
     private boolean available = true;
     @Setter
-    private double discount;
-
+    private double discount;    
 
     @Setter
     @ManyToOne
