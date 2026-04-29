@@ -20,7 +20,7 @@ public class Order {
     private String customerName;
     private String phone;
     private String address;
-    private String orderNumber;  // ← add this field
+    private String orderNumber;
 
     private String restaurantId;
     private String restaurantName;

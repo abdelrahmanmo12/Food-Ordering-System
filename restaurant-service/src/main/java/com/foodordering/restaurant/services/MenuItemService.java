@@ -93,4 +93,13 @@ public class MenuItemService {
 
         return menu;
     }
+
+    public List<MenuItem> getAllItems() {
+        return menuItemRepository.findAll();
+    }
+
+    public MenuItem getItemById(Long id) {
+        return menuItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + id));
+    }
 }

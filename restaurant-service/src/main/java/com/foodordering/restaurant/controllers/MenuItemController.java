@@ -54,6 +54,16 @@ public class MenuItemController {
         return menuItemService.getOffers();
     }
 
+    @GetMapping("/items")
+    public List<MenuItem> getAllItems() {
+        return menuItemService.getAllItems();
+    }
+
+    @GetMapping("/item/{id}")
+    public MenuItem getItemById(@PathVariable Long id) {
+        return menuItemService.getItemById(id);
+    }
+
     // Add multiple items at once
     @PostMapping("/bulk/{restaurantId}")
     public ResponseEntity<List<MenuItem>> addBulkItems(

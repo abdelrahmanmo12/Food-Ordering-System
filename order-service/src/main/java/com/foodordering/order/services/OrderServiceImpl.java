@@ -21,29 +21,17 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepo;
     private final RestaurantClient restaurantClient;
 
-    // ================= ORDER =================
 
     @Override
-    public OrderResponse createOrder(OrderRequest request) {
-
-        var restaurant = restaurantClient.getByName(request.getRestaurantName());
-
-        if (restaurant == null) {
-            throw new RestaurantNotFoundException(request.getRestaurantName());
-        }
-
+    public OrderCreationResponse createOrder(OrderRequest request) {
         double total = 0;
         List<OrderItem> items = new ArrayList<>();
 
         for (var reqItem : request.getItems()) {
-
-            var menuItem = restaurantClient.getItem(
-                    Long.valueOf(restaurant.getId()),
-                    reqItem.getItemName()
-            );
+            var menuItem = restaurantClient.getItemById(reqItem.getItemId());
 
             if (menuItem == null) {
-                throw new RestaurantNotFoundException(reqItem.getItemName());
+                throw new RestaurantNotFoundException("Item not found: " + reqItem.getItemId());
             }
 
             double price = menuItem.getPrice();
@@ -60,11 +48,8 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerName(request.getCustomerName())
-                .phone(request.getPhone())
                 .address(request.getAddress())
-                .restaurantId(restaurant.getId())
-                .restaurantName(restaurant.getName())
+                .restaurantId(String.valueOf(request.getRestaurantId()))
                 .items(items)
                 .totalPrice(total)
                 .status(OrderStatus.CREATED)
@@ -72,12 +57,11 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderRepo.save(order);
-        cartRepo.deleteByPhone(request.getPhone());
 
-        return map(order);
+        Long orderId = 5000L + (long)(Math.random() * 1000);
+        return new OrderCreationResponse(orderId, "Order placed successfully");
     }
 
-    // ================= CHECKOUT =================
 
     public OrderResponse checkout(String phone, CheckoutRequest request) {
 
@@ -113,7 +97,6 @@ public class OrderServiceImpl implements OrderService {
         return map(order);
     }
 
-    // ================= TRACK ORDER =================
 
     public OrderTrackingResponse trackOrder(String orderNumber) {
 
@@ -148,7 +131,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    // ================= GET ORDERS =================
 
     @Override
     public List<OrderResponse> getOrders(String phone) {
@@ -158,7 +140,6 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
-    // ================= CANCEL =================
 
     @Override
     public void cancelOrder(String orderNumber) {
@@ -180,10 +161,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public CartResponse addToCart(String phone, String itemName, int quantity, Long restaurantId) {
-        return null;
+        throw new UnsupportedOperationException("Use addToCart with List<CartItemRequest> instead");
     }
 
-    // ================= CART =================
 
     @Override
     public CartResponse addToCart(String phone, List<CartItemRequest> items, String restaurantName) {
@@ -203,7 +183,7 @@ public class OrderServiceImpl implements OrderService {
 
         for (var reqItem : items) {
 
-            var menu = restaurantClient.getItem(
+            var menu = restaurantClient.getItemByName(
                     Long.valueOf(restaurant.getId()),
                     reqItem.getItemName()
             );
@@ -249,7 +229,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public CartResponse addToCart(String phone, String itemName, int quantity, String restaurantName) {
-        return null;
+        CartItemRequest item = new CartItemRequest();
+        item.setItemName(itemName);
+        item.setQuantity(quantity);
+        return addToCart(phone, List.of(item), restaurantName);
     }
 
     @Override
@@ -257,7 +240,6 @@ public class OrderServiceImpl implements OrderService {
         cartRepo.deleteByPhone(phone);
     }
 
-    // ================= ADMIN =================
 
     public List<OrderResponse> getAllOrders() {
         return orderRepo.findAll()
@@ -272,7 +254,6 @@ public class OrderServiceImpl implements OrderService {
         orderRepo.deleteById(order.getId());
     }
 
-    // ================= ADMIN + RESTAURANT OWNER =================
 
     public OrderResponse updateOrderStatus(String orderNumber, OrderStatus status) {
 
@@ -292,7 +273,6 @@ public class OrderServiceImpl implements OrderService {
         return map(order);
     }
 
-    // ================= RESTAURANT OWNER =================
 
     public List<RestaurantOrderResponse> getOrdersByRestaurant(String restaurantName) {
         return orderRepo.findByRestaurantName(restaurantName)
@@ -315,7 +295,6 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
-    // ================= MAPPERS =================
 
     private OrderResponse map(Order order) {
         return OrderResponse.builder()
@@ -339,7 +318,7 @@ public class OrderServiceImpl implements OrderService {
                 .restaurantName(cart.getRestaurantName())
                 .items(cart.getItems())
                 .totalPrice(total)
-                .message("Cart updated successfully")  // ← add this
+                .message("Cart updated successfully")
                 .build();
     }
 }
