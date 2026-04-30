@@ -38,7 +38,7 @@ public class JwtService {
 
     public String generateToken(user user) {
 
-        long EXPIRATION = 15 * 60 * 1000;
+        long EXPIRATION = 40 * 60 * 1000;
         try {
             return Jwts.builder()
                     .setSubject(user.getEmail())
