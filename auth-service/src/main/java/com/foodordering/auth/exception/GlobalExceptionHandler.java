@@ -1,6 +1,6 @@
 package com.foodordering.auth.exception;
 
-import java.nio.file.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -66,14 +66,15 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse("An unexpected error occurred"));
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
+   @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex) {
         Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
         body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "Login Error");
+        body.put("error", "Forbidden");
         body.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN); // 👈 خلي دي FORBIDDEN مش BAD_REQUEST
     }
 
     @ExceptionHandler(DisabledException.class)

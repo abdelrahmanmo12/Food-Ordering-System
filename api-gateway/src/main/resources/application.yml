@@ -1,20 +1,62 @@
 server:
-  port: 8080 
+  port: 8080
 
 spring:
-  application:
-    name: api-gateway
   cloud:
     gateway:
       routes:
+
+        # 1️⃣ AUTH (برا السيكيوريتي)
         - id: auth-service
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**
+
+        - id: restaurant-admin
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/restaurants/request,/restaurants/**
           filters:
-            - AuthenticationFilter #
+            - AuthenticationFilter
+
+        - id: restaurant-public
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/restaurants
+            - Method=GET
+
+        - id: menu-public
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/menu/**
+            - Method=GET
+
+        - id: restaurant-private
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/restaurants/**
+            - Method=POST,PUT,DELETE,PATCH
+          filters:
+            - AuthenticationFilter
+
+        - id: menu-private
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/menu/**
+            - Method=POST,PUT,DELETE,PATCH
+          filters:
+            - AuthenticationFilter
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+jwt:
+  public:
+    key: >-
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqL9qG0qA5i0Hjm5LvUH2j70tu17pYrUi+U6o
+      ySwdF3trdQa7dj4ECTq5S1Ib/c8If5HlvN30FYf4TIdSJdb95hlG8ZIBImxopEphrD3jhIRwct5TTMWw
+      Rhz4bZAh8NvMnG9EdrKBtNx87RdWiK7LIXSxVV0QjyVlKnhHPAHU3T9OgDgPKPbmMy/mnCtD8CdxNAwN
+      1+bvcCjxyn1pNtoFpB5yYe6+pbx0A3B2Vl0FbKgTSMRjdy7vNeEs46zzD79SeYbiMwzg4Gm/psZta/bx
+      ZC2FMmvPar3vH3tADnxtf2lW4VzVIwkHBjZ/B7U8rE2RmTd3xtNPB5RkhLkjUc9UrwIDAQAB

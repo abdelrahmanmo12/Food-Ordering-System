@@ -1,5 +1,6 @@
 package com.foodordering.restaurant.services;
 
+import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.MenuItemRepository;
@@ -16,54 +17,89 @@ public class MenuItemService {
     private MenuItemRepository menuItemRepository;
 
     @Autowired
+    private RestaurantService restaurantService;
+
+    @Autowired
     private RestaurantRepository restaurantRepository;
 
-    //  Add Menu Item
-    public MenuItem addMenuItem(Long restaurantId, MenuItem item) {
-
-
-
-        if(menuItemRepository.existsByNameAndRestaurant_Id(item.getName(), restaurantId)){
-            throw new RuntimeException("Menu item already exists");
+    private void validateAccess(Restaurant restaurant, UserDTO user, String action) {
+        restaurantService.autherizeUser(user, action);
+        if (!"ADMIN".equals(user.getRole())) {
+            restaurantService.isTheSameOwner(restaurant, user);
         }
-
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-
-        item.setRestaurant(restaurant); 
-
-        return menuItemRepository.save(item);
     }
 
-    // Get Menu by Restaurant
+    public MenuItem addMenuItem(Long restaurantId, MenuItem item, UserDTO owner) {
+        
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        validateAccess(restaurant, owner, "add menu item");
+
+        if (menuItemRepository.existsByNameAndRestaurant_Id(item.getName(), restaurantId)) {
+            throw new RuntimeException("Menu item already exists");
+        }
+       
+        item.setRestaurant(restaurant);
+
+        return menuItemRepository.save(item);
+        }
+    
     public List<MenuItem> getMenuByRestaurant(Long restaurantId) {
         return menuItemRepository.findByRestaurantId(restaurantId);
     }
 
-    // Update Menu Item
-    public MenuItem updateMenuItem(Long id, MenuItem updated) {
+    public MenuItem updateMenuItem(Long id, MenuItem updated, UserDTO owner) {
 
         MenuItem item = menuItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Menu item not found"));
 
-        item.setName(updated.getName());
-        item.setDescription(updated.getDescription());
-        item.setPrice(updated.getPrice());
-        item.setCategory(updated.getCategory());
-        item.setAvailable(updated.isAvailable());
-        item.setDiscount(updated.getDiscount());
-
+        validateAccess(item.getRestaurant(), owner, "update meny item");
+        applyPartialUpdates(item, updated);
+        System.out.println("DEBUG: Description after update: " + item.getDescription());
         return menuItemRepository.save(item);
     }
 
-    // Delete Menu Item
-    public void deleteMenuItem(Long id) {
+    public void deleteMenuItem(Long id, UserDTO owner) {
+        MenuItem item = menuItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Menu item not found"));
+
+        validateAccess(item.getRestaurant(), owner, "delete menu items");
+        
         menuItemRepository.deleteById(id);
     }
+
     public List<MenuItem> getByCategory(String category) {
         return menuItemRepository.findByCategory(category);
     }
+
     public List<MenuItem> getOffers() {
         return menuItemRepository.findByDiscountGreaterThan(0);
     }
+
+    public void applyPartialUpdates(MenuItem item, MenuItem updated){
+        if (updated.getName() != null && !updated.getName().isEmpty()) {
+            item.setName(updated.getName());
+        }
+        if (updated.getDescription() != null && !updated.getDescription().isEmpty()) {
+            item.setDescription(updated.getDescription());
+        }
+
+        if (updated.getPrice() != null && updated.getPrice() != 0) {
+            item.setPrice(updated.getPrice());
+        }
+
+        if (updated.getCategory() != null) {
+            item.setCategory(updated.getCategory());
+        }
+    
+        if (updated.getAvailable() != null) {
+            item.setAvailable(updated.getAvailable());
+        }        
+
+        if (updated.getDiscount() != null && updated.getDiscount() >= 0) {
+            item.setDiscount(updated.getDiscount());
+        }
+    }
 }
+

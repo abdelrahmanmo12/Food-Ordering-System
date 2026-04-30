@@ -1,10 +1,17 @@
 package com.foodordering.restaurant.models;
 
 import jakarta.persistence.*;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+import com.foodordering.restaurant.enums.AdminStatus;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 public class Restaurant {
 
@@ -12,35 +19,17 @@ public class Restaurant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Setter
     private String name;
-    @Setter
     private String location;
-    @Setter
     private String phone;
-    @Setter
-    private String description;
+    private String description;    
+    private Long ownerId;
 
-    @Setter
-    private boolean active = true;
+    @Enumerated(EnumType.STRING)
+    private AdminStatus status = AdminStatus.PENDING;
     
-    @Setter
-    private boolean pending = true;
+    private boolean isOpened = false;
     
-    private Long owner_id;
-    
-
-
-
-    public Long getOwner_id() {
-        return owner_id;
-    }
-
-    public void setOwner_id(Long owner_id) {
-        this.owner_id = owner_id;
-    }
-
-    @Setter
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
     private List<MenuItem> menuItems;
 
@@ -63,10 +52,6 @@ public class Restaurant {
 
     public String getDescription() {
         return description;
-    }
-
-    public boolean isActive() {
-        return active;
     }
 
     public List<MenuItem> getMenuItems() {

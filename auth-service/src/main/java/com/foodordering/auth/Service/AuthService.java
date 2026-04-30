@@ -1,17 +1,5 @@
 package com.foodordering.auth.Service;
 
-
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.stereotype.Service;
-
 import com.foodordering.auth.Entity.RefreshToken;
 import com.foodordering.auth.Entity.user;
 import com.foodordering.auth.Enum.AccountStatus;
@@ -25,8 +13,17 @@ import com.foodordering.auth.dto.Response.LoginResponse;
 import com.foodordering.auth.dto.Response.RefreshTokenResponse;
 import com.foodordering.auth.dto.Response.ValidationResponse;
 import com.foodordering.auth.exception.UserNotFoundException;
-
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 public class AuthService {
@@ -45,7 +42,6 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-
         user dbUser = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -70,7 +66,6 @@ public class AuthService {
                     "SHOW_REJECTION_AND_EDIT");
         }
 
-
         if (dbUser.getRole() == Role.OWNER && dbUser.getStatus() == AccountStatus.PENDING) {
             return new LoginResponse(accessToken, dbUser.getRole().name(), dbUser.getUser_id(), refreshToken,
                     "GO_TO_COMPLETE_PROFILE");
@@ -81,31 +76,30 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String email) {
-        refreshTokenService.deleteByEmail(email);
+    public void logout(String userId) {
+        user dbUser = userRepo.findById(Long.parseLong(userId))
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        refreshTokenService.deleteByEmail(dbUser.getEmail());
     }
+
     @Transactional
     public RefreshTokenResponse refreshToken(RefreshRequest request) {
-
         RefreshToken rt = refreshTokenService.validate(request.getRefreshToken());
 
         user user = userRepo.findByEmail(rt.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
         String newAccessToken = jwtService.generateToken(user);
-
         return new RefreshTokenResponse(request.getRefreshToken(), newAccessToken);
     }
 
-    
+    // Kept for manual/debug use — gateway no longer calls this endpoint
     public ResponseEntity<?> validateToken(String authHeader) {
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Header");
         }
 
         String token = authHeader.substring(7);
-
         Map<String, Object> result = jwtService.validateAndGetClaims(token);
 
         if (!(boolean) result.get("isValid")) {

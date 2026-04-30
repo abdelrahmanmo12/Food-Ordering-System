@@ -20,13 +20,13 @@ public class MenuItem {
     @Setter
     private String description;
     @Setter
-    private double price;
+    private Double price;
     @Setter
     private String category;
     @Setter
-    private boolean available = true;
+    private Boolean available = true;
     @Setter
-    private double discount;    
+    private Double discount;     
 
     @Setter
     @ManyToOne
@@ -48,7 +48,7 @@ public class MenuItem {
         return description;
     }
 
-    public double getPrice() {
+    public Double getPrice() {
         return price;
     }
 
@@ -56,11 +56,11 @@ public class MenuItem {
         return category;
     }
 
-    public boolean isAvailable() {
+    public Boolean getAvailable() { 
         return available;
     }
 
-    public double getDiscount() {
+    public Double getDiscount() {
         return discount;
     }
 

@@ -1,10 +1,14 @@
 package com.foodordering.restaurant.services;
+
+import com.foodordering.restaurant.dtos.UserDTO;
+import com.foodordering.restaurant.enums.AdminStatus;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+
 @Service
 public class RestaurantService {
 
@@ -20,21 +24,106 @@ public class RestaurantService {
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
     }
 
-    public Restaurant addRestaurant(Restaurant restaurant, Long userId) {
-        restaurant.setOwner_id(userId);
+    public Restaurant addRestaurant(Restaurant restaurant, UserDTO owner) {
+
+        autherizeUser(owner, "add a new restaurant");
+
+        try {
+            Long id = Long.valueOf(owner.getId());
+            restaurant.setOwnerId(id);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid User ID format");
+        }
 
         return restaurantRepository.save(restaurant);
     }
 
-    public Restaurant updateRestaurant(Long id, Restaurant updated) {
-        Restaurant r = getRestaurantById(id);
-        r.setName(updated.getName());
-        r.setLocation(updated.getLocation());
-        r.setPhone(updated.getPhone());
-        return restaurantRepository.save(r);
+    public Restaurant updateRestaurant(Long id, Restaurant updated, UserDTO owner) {
+
+        autherizeUser(owner, "update this restaurant");
+
+        Restaurant restaurant = getRestaurantById(id);
+        if (!"ADMIN".equals(owner.getRole())) {
+            isTheSameOwner(restaurant, owner);
+        }
+        applyRestaurantUpdates(restaurant, updated);
+
+        return restaurantRepository.save(restaurant);
     }
 
-    public void deleteRestaurant(Long id) {
+    public void deleteRestaurant(Long id, UserDTO owner) {
+        autherizeUser(owner, "delete this restaurant");
+
+        Restaurant restaurant = getRestaurantById(id);
+
+        if (!"ADMIN".equals(owner.getRole())) {
+            isTheSameOwner(restaurant, owner);
+        }
+
         restaurantRepository.deleteById(id);
+    }
+
+    public void autherizeUser(UserDTO owner, String message) {
+        String role = owner.getRole();
+
+        if ("ADMIN".equals(role)) {
+            return;
+        }
+
+        if ("OWNER".equals(role) && "ACTIVE".equals(owner.getStatus())) {
+            return;
+        }
+        throw new RuntimeException("Access Denied: You must be an ADMIN or an ACTIVE OWNER to " + message);
+    }
+
+    public void isTheSameOwner(Restaurant restaurant, UserDTO owner) {
+        if (!owner.getId().equals(String.valueOf(restaurant.getOwnerId()))) {
+            throw new RuntimeException("You are not the owner of this restaurant");
+        }
+    }
+
+    private void applyRestaurantUpdates(Restaurant restaurant, Restaurant updated) {
+        if (updated.getName() != null && !updated.getName().isEmpty()) {
+            restaurant.setName(updated.getName());
+        }
+        if (updated.getLocation() != null && !updated.getLocation().isEmpty()) {
+            restaurant.setLocation(updated.getLocation());
+        }
+        if (updated.getPhone() != null && !updated.getPhone().isEmpty()) {
+            restaurant.setPhone(updated.getPhone());
+        }
+        if (updated.getDescription() != null && !updated.getDescription().isEmpty()) {
+            restaurant.setDescription(updated.getDescription());
+        }
+    }
+
+    public Restaurant toggleOpeningStatus(Long id, UserDTO owner) {
+        Restaurant restaurant = getRestaurantById(id);
+
+        isTheSameOwner(restaurant, owner);
+
+        if (restaurant.getStatus() != AdminStatus.APPROVED) {
+            throw new RuntimeException("You can't toggle it untill the restaurant is approved");
+        }
+
+        restaurant.setOpened(!restaurant.isOpened());
+        return restaurantRepository.save(restaurant);
+    }
+
+
+    public  List<Restaurant> getAllPendingRestaurants(String role) {
+        if(!"ADMIN".equals(role)){
+            throw new RuntimeException("Only admins can view pending restaurants");
+        }
+        List<Restaurant> restaurants = restaurantRepository.findByStatus(AdminStatus.PENDING);
+        return restaurants;
+
+    }
+
+    public String approveRestaurant(String id) {
+        Restaurant restaurant = getRestaurantById(Long.valueOf(id));
+        restaurant.setStatus(AdminStatus.APPROVED);
+        restaurantRepository.save(restaurant);  
+        return "Approved";
     }
 }
