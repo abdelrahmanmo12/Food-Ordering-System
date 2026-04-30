@@ -12,6 +12,8 @@ import com.foodordering.auth.Enum.Role;
 import com.foodordering.auth.Repo.UserRepo;
 import com.foodordering.auth.dto.Response.PendingAccountResponse;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class AdminService {
 
@@ -28,6 +30,7 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public void updateStatus(Long id, String statusRequest) {
         user account = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Account ID not found"));
@@ -35,7 +38,7 @@ public class AdminService {
         AccountStatus newStatus = AccountStatus.valueOf(statusRequest.toUpperCase());
 
         if (newStatus == AccountStatus.ACTIVE) { 
-            account.setRole(Role.OWNER);
+            // account.setRole(Role.OWNER);
             account.setStatus(AccountStatus.ACTIVE);
         } else if (newStatus == AccountStatus.BANNED) {
             
@@ -43,6 +46,8 @@ public class AdminService {
 
         }else if (newStatus == AccountStatus.REJECTED) {
             account.setStatus(AccountStatus.REJECTED);
+        }else if(newStatus == AccountStatus.PENDING){
+            account.setStatus(AccountStatus.PENDING);
         }
 
         userRepo.save(account);
