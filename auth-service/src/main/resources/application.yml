@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/userauthdb
+    username: root
+    password: "123456789"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.MySQLDialect
+server:
+  port: 8081
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/ 
+    fetch-registry: true
+    register-with-eureka: true
+
+
+jwt:
+  private:
+    key: >-
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCov2obSoDmLQeObku9QfaPvS27Xuli
+      tSL5TqjJLB0Xe2t1Brt2PgQJOrlLUhv9zwh/keW83fQVh/hMh1Il1v3mGUbxkgEibGikSmGsPeOEhHBy
+      3lNMxbBGHPhtkCHw28ycb0R2soG03HztF1aIrsshdLFVXRCPJWUqeEc8AdTdP06AOA8o9uYzL+acK0Pw
+      J3E0DA3X5u9wKPHKfWk22gWkHnJh7r6lvHQDcHZWXQVsqBNIxGN3Lu814SzjrPMPv1J5huIzDODgab+m
+      xm1r9vFkLYUya89qve8fe0AOfG1/aVbhXNUjCQcGNn8HtTysTZGZN3fG008HlGSEuSNRz1SvAgMBAAEC
+      ggEAIZEl/bTFzEOjz6jQBx8yeShECxQXr8thYB9OAup0BQJHf1lt+9jdO6rDRiDYsZW31oyCmx25mnjY
+      Ivz+Ecng6p8XliEZeav/6sJjCHytH+Sqa6cfAdQHOwMzRbQYlE1ct7eIcmYS2BPOA+mTDJBcltScG+Nt
+      0lO5eoe/f8fLfJDyhYfxJxF8SbqhHfhlu18un7nDV4DGgwy3HofWhO8UK69KSNrWlgFkEjqMPO+8qpF9
+      DbbMkcr40RFTuBHvI6sUz7AlG4lUlRyjYmgmLtTvouD57Dg3jkyjVslZ1yF6whqZIUKfYSL4jqAK/N0n
+      gW7RxSe4FgD08MIWXkFSWoRdgQKBgQDo+tggAtClmkFvZxw1of0ftCj/jcU87xrsbsL9rTCVMXluGsWo
+      6k7R518D4UgYaBkpMqlGUhZs14JHnDB15Zj/aG/pgnLp61EuwKDnpN5BO0uNcOT+qPQyxNxJS4S4xF5I
+      iQOAy7tLiJogw7jeRpPlRGExugAf1y2eyHhL5E7/LwKBgQC5a9ZaP/0+MAgGxc3bQ1ZLv2fUy+lRlBaq
+      9Cmf2Ihbvr1J8qPCbKyACWuaHWwBP3d8H8ArJPef6XfAKsEMScViz3uYqRdnk+W+vbkJBexZF5SDSzrD
+      3WdmX8Wgg/cb9ixswOv3oPw5eJdv5EqEdloBtt2xFoPZ65UalLNGZouigQKBgQCkV1We9v1g43fm8m/m
+      sTaRZ49H/SQ1gGCYiOUI9mL/yp9ieIYXSfiBflj6rq4hcUTWV8MqNHtXGYnvo5BXibar62qN6BPRR8nD
+      VePqotSYZRA9XHZb4KgpK85L8XZUs0fimKuc7ZlXhatbE1TTjiuDHQIGhrLRwwKOL9ETj5/dxwKBgD85
+      uTa++RBaenIswrwQYv2jP7l86ospru0OIp9hy2VVTeBIP3TNb6idDbbYb3qhdJG7leBgU5uQlYfOTFNv
+      WEIQM7njdpqYANAgi1a7UVMzyi1W2qvs9BQhdhb8yKcdMxrGUe/3Ueoa57B8rLgsTxakj0WSQtVtEkOl
+      DthjoRuBAoGBAI7Qy6BpvOlPlQvxCWAoVvxl7S+gn0xsB6X2I0FO/VcDOPp6BlwTb4+sXG5CIL/Mdlhd
+      mRKunHOdxN6LokUyDPvvh8XHTNCQMddIloc/Sckwh8cCwBM3zYf7gIwH1lCvsJ9W/scKcnXylllflOUj
+      vMzeCWPC60c74f3+4r66zRp6
+  public:
+    key: >-
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqL9qG0qA5i0Hjm5LvUH2j70tu17pYrUi+U6o
+      ySwdF3trdQa7dj4ECTq5S1Ib/c8If5HlvN30FYf4TIdSJdb95hlG8ZIBImxopEphrD3jhIRwct5TTMWw
+      Rhz4bZAh8NvMnG9EdrKBtNx87RdWiK7LIXSxVV0QjyVlKnhHPAHU3T9OgDgPKPbmMy/mnCtD8CdxNAwN
+      1+bvcCjxyn1pNtoFpB5yYe6+pbx0A3B2Vl0FbKgTSMRjdy7vNeEs46zzD79SeYbiMwzg4Gm/psZta/bx
+      ZC2FMmvPar3vH3tADnxtf2lW4VzVIwkHBjZ/B7U8rE2RmTd3xtNPB5RkhLkjUc9UrwIDAQAB
