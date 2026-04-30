@@ -5,6 +5,7 @@ import com.foodordering.restaurant.enums.AdminStatus;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.RestaurantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -14,6 +15,9 @@ public class RestaurantService {
 
     @Autowired
     private RestaurantRepository restaurantRepository;
+
+    @Autowired
+    private ImageService imageService;
 
     public List<Restaurant> getAllRestaurants() {
         return restaurantRepository.findAll();
@@ -26,7 +30,7 @@ public class RestaurantService {
 
     public Restaurant addRestaurant(Restaurant restaurant, UserDTO owner) {
 
-        autherizeUser(owner, "add a new restaurant");
+        authorizeUser(owner, "add a new restaurant");
 
         try {
             Long id = Long.valueOf(owner.getId());
@@ -40,7 +44,7 @@ public class RestaurantService {
 
     public Restaurant updateRestaurant(Long id, Restaurant updated, UserDTO owner) {
 
-        autherizeUser(owner, "update this restaurant");
+        authorizeUser(owner, "update this restaurant");
 
         Restaurant restaurant = getRestaurantById(id);
         if (!"ADMIN".equals(owner.getRole())) {
@@ -52,7 +56,7 @@ public class RestaurantService {
     }
 
     public void deleteRestaurant(Long id, UserDTO owner) {
-        autherizeUser(owner, "delete this restaurant");
+        authorizeUser(owner, "delete this restaurant");
 
         Restaurant restaurant = getRestaurantById(id);
 
@@ -63,7 +67,7 @@ public class RestaurantService {
         restaurantRepository.deleteById(id);
     }
 
-    public void autherizeUser(UserDTO owner, String message) {
+    public void authorizeUser(UserDTO owner, String message) {
         String role = owner.getRole();
 
         if ("ADMIN".equals(role)) {
@@ -100,6 +104,8 @@ public class RestaurantService {
     public Restaurant toggleOpeningStatus(Long id, UserDTO owner) {
         Restaurant restaurant = getRestaurantById(id);
 
+        authorizeUser(owner, "to toggle this restaurant");
+
         isTheSameOwner(restaurant, owner);
 
         if (restaurant.getStatus() != AdminStatus.APPROVED) {
@@ -110,9 +116,8 @@ public class RestaurantService {
         return restaurantRepository.save(restaurant);
     }
 
-
-    public  List<Restaurant> getAllPendingRestaurants(String role) {
-        if(!"ADMIN".equals(role)){
+    public List<Restaurant> getAllPendingRestaurants(String role) {
+        if (!"ADMIN".equals(role)) {
             throw new RuntimeException("Only admins can view pending restaurants");
         }
         List<Restaurant> restaurants = restaurantRepository.findByStatus(AdminStatus.PENDING);
@@ -120,10 +125,40 @@ public class RestaurantService {
 
     }
 
-    public String approveRestaurant(String id) {
-        Restaurant restaurant = getRestaurantById(Long.valueOf(id));
-        restaurant.setStatus(AdminStatus.APPROVED);
-        restaurantRepository.save(restaurant);  
-        return "Approved";
+    public String updateRestaurantStatus(Long id, String role, AdminStatus newStatus) {
+        if (!"ADMIN".equals(role)) {
+            throw new RuntimeException("Only admins can approve restaurants");
+        }
+        Restaurant restaurant = getRestaurantById(id);
+
+        restaurant.setStatus(newStatus);
+
+        if (newStatus == AdminStatus.BANNED) {
+            restaurant.setOpened(false);
+        }
+
+        restaurantRepository.save(restaurant);
+        return "Restaurant status updated to " + newStatus;
     }
+
+    public String uploadImage(Long id, MultipartFile file, UserDTO owner) {
+
+        if (!"OWNER".equals(owner.getRole())) {
+            throw new RuntimeException("Only owners can upload images");
+        }
+        Restaurant restaurant = getRestaurantById(id);
+        isTheSameOwner(restaurant, owner);
+
+        String imageUrl = imageService.uploadImage(file);
+
+        restaurant.setImageUrl(imageUrl);
+
+        restaurantRepository.save(restaurant);
+
+        return imageUrl;
+
+    }
+
+
+
 }

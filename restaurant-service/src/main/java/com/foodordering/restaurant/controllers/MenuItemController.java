@@ -4,6 +4,7 @@ import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.services.MenuItemService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -55,5 +56,17 @@ public class MenuItemController {
     @GetMapping("/offers")
     public List<MenuItem> getOffers() {
         return menuItemService.getOffers();
+    }
+
+    @PostMapping("/{id}/image")
+    public String uploadItemImage(@PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @RequestHeader("X-User-Status") String status) {
+
+        UserDTO owner = new UserDTO(userId, role, status);
+
+        return menuItemService.uploadImage(id, file, owner);
     }
 }

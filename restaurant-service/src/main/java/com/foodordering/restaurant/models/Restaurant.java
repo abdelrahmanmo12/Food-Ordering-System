@@ -29,33 +29,35 @@ public class Restaurant {
     private AdminStatus status = AdminStatus.PENDING;
     
     private boolean isOpened = false;
+
+    String imageUrl;
     
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
     private List<MenuItem> menuItems;
 
 
-    public Long getId() {
-        return id;
-    }
+    // public Long getId() {
+    //     return id;
+    // }
 
-    public String getName() {
-        return name;
-    }
+    // public String getName() {
+    //     return name;
+    // }
 
-    public String getLocation() {
-        return location;
-    }
+    // public String getLocation() {
+    //     return location;
+    // }
 
-    public String getPhone() {
-        return phone;
-    }
+    // public String getPhone() {
+    //     return phone;
+    // }
 
-    public String getDescription() {
-        return description;
-    }
+    // public String getDescription() {
+    //     return description;
+    // }
 
-    public List<MenuItem> getMenuItems() {
-        return menuItems;
-    }
+    // public List<MenuItem> getMenuItems() {
+    //     return menuItems;
+    // }
 
 }
