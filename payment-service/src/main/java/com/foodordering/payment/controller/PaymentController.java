@@ -5,10 +5,17 @@ import com.foodordering.payment.dto.PaymentResponse;
 import com.foodordering.payment.dto.RefundRequest;
 import com.foodordering.payment.dto.StripePaymentIntentResponse;
 import com.foodordering.payment.entity.Payment;
+import com.foodordering.payment.exception.PaymentProcessingException;
 import com.foodordering.payment.service.PaymentService;
+import com.stripe.exception.SignatureVerificationException;
+import com.stripe.model.Event;
+import com.stripe.model.PaymentIntent;
+import com.stripe.model.StripeObject;
+import com.stripe.net.Webhook;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,6 +30,17 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
+
+    @Value("${stripe.webhook.secret}")
+    private String stripeWebhookSecret;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CUSTOMER')")
+    public ResponseEntity<Object> createPayment(@Valid @RequestBody PaymentRequest request) {
+        log.info("REST request to create payment for order: {}", request.getOrderId());
+        Object response = paymentService.createPayment(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
     @PostMapping("/create-intent")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CUSTOMER')")
@@ -49,7 +67,7 @@ public class PaymentController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public ResponseEntity<List<PaymentResponse>> getPaymentsByUserId(@PathVariable Long userId) {
         log.info("REST request to get payments for user: {}", userId);
         List<PaymentResponse> responses = paymentService.getPaymentsByUserId(userId);
@@ -91,8 +109,9 @@ public class PaymentController {
                                                      @RequestHeader("Stripe-Signature") String signature) {
         log.info("Received Stripe webhook");
         try {
-            String paymentIntentId = extractPaymentIntentId(payload);
-            String eventType = extractEventType(payload);
+            Event event = Webhook.constructEvent(payload, signature, stripeWebhookSecret);
+            String eventType = event.getType();
+            String paymentIntentId = extractPaymentIntentId(event);
 
             if (paymentIntentId != null && eventType != null) {
                 paymentService.handleStripeWebhook(paymentIntentId, eventType);
@@ -101,37 +120,24 @@ public class PaymentController {
                 log.warn("Could not extract payment intent ID or event type from webhook payload");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid webhook payload");
             }
+        } catch (SignatureVerificationException e) {
+            log.warn("Invalid Stripe webhook signature: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid webhook signature");
         } catch (Exception e) {
             log.error("Error processing webhook: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Webhook processing failed");
         }
     }
 
-    private String extractPaymentIntentId(String payload) {
-        if (payload.contains("\"payment_intent\"")) {
-            int start = payload.indexOf("\"payment_intent\"");
-            if (start > 0) {
-                int idStart = payload.indexOf("\"", start + 17) + 1;
-                int idEnd = payload.indexOf("\"", idStart);
-                if (idEnd > idStart) {
-                    return payload.substring(idStart, idEnd);
-                }
-            }
-        }
-        return null;
-    }
+    private String extractPaymentIntentId(Event event) {
+        StripeObject stripeObject = event.getDataObjectDeserializer()
+                .getObject()
+                .orElseThrow(() -> new PaymentProcessingException("Unable to deserialize Stripe webhook payload"));
 
-    private String extractEventType(String payload) {
-        if (payload.contains("\"type\"")) {
-            int start = payload.indexOf("\"type\"");
-            if (start > 0) {
-                int valueStart = payload.indexOf("\"", start + 6) + 1;
-                int valueEnd = payload.indexOf("\"", valueStart);
-                if (valueEnd > valueStart) {
-                    return payload.substring(valueStart, valueEnd);
-                }
-            }
+        if (stripeObject instanceof PaymentIntent paymentIntent) {
+            return paymentIntent.getId();
         }
+
         return null;
     }
 }

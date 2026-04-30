@@ -5,7 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,9 +36,12 @@ public class Payment {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false)
     private PaymentStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false)
     private PaymentMethod paymentMethod;
 
@@ -68,6 +73,7 @@ public class Payment {
     public enum PaymentMethod {
         CREDIT_CARD,
         DEBIT_CARD,
+        DIGITAL_WALLET,
         PAYPAL,
         CASH_ON_DELIVERY,
         BANK_TRANSFER

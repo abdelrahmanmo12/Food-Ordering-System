@@ -4,6 +4,7 @@ import com.foodordering.payment.dto.PaymentRequest;
 import com.foodordering.payment.dto.PaymentResponse;
 import com.foodordering.payment.dto.RefundRequest;
 import com.foodordering.payment.dto.StripePaymentIntentResponse;
+import com.foodordering.payment.config.PaymentSchemaMigration;
 import com.foodordering.payment.entity.Payment;
 import com.foodordering.payment.exception.PaymentNotFoundException;
 import com.foodordering.payment.exception.PaymentProcessingException;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +29,30 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final StripeService stripeService;
+    private final PaymentSchemaMigration paymentSchemaMigration;
+
+    /**
+     * Create a payment using the correct flow for the selected payment method.
+     * Card, wallet, and PayPal payments use Stripe. Cash-on-delivery and bank
+     * transfer are recorded as pending offline/manual payments.
+     */
+    @Transactional
+    public Object createPayment(PaymentRequest request) {
+        if (requiresStripe(request.getPaymentMethod())) {
+            return createPaymentIntent(request);
+        }
+
+        Payment payment = paymentMapper.toEntity(request);
+        payment.setPaymentId(generatePaymentId());
+        payment.setStatus(Payment.PaymentStatus.PENDING);
+        payment.setTransactionId("MANUAL-" + payment.getPaymentId());
+
+        Payment savedPayment = paymentRepository.save(payment);
+        log.info("Manual/offline payment recorded - PaymentId: {}, Method: {}",
+                savedPayment.getPaymentId(), savedPayment.getPaymentMethod());
+
+        return paymentMapper.toResponse(savedPayment);
+    }
 
     /**
      * Create a Payment Intent with Stripe
@@ -37,9 +63,14 @@ public class PaymentService {
     public StripePaymentIntentResponse createPaymentIntent(PaymentRequest request) {
         log.info("Creating Stripe Payment Intent for order: {}, user: {}", request.getOrderId(), request.getUserId());
 
+        if (!requiresStripe(request.getPaymentMethod())) {
+            throw new PaymentProcessingException("Payment method " + request.getPaymentMethod()
+                    + " is not an online Stripe payment method. Use POST /api/payments to record it.");
+        }
+
         // Create payment record with PENDING status
         Payment payment = paymentMapper.toEntity(request);
-        payment.setPaymentId("PAY-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 10000));
+        payment.setPaymentId(generatePaymentId());
         payment.setStatus(Payment.PaymentStatus.PENDING);
 
         try {
@@ -95,12 +126,15 @@ public class PaymentService {
             throw new PaymentProcessingException("Cannot refund payment with status: " + payment.getStatus());
         }
 
+        java.math.BigDecimal refundAmount = java.math.BigDecimal.valueOf(request.getRefundAmount());
+        if (refundAmount.compareTo(payment.getAmount()) > 0) {
+            throw new PaymentProcessingException("Refund amount cannot exceed original payment amount");
+        }
+
         try {
             // Use Stripe for refund if payment has Stripe Payment Intent ID
             if (payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty()) {
-                long amountInCents = StripeService.convertToCents(
-                        java.math.BigDecimal.valueOf(request.getRefundAmount())
-                );
+                long amountInCents = StripeService.convertToCents(refundAmount);
                 stripeService.createRefund(payment.getStripePaymentIntentId(), amountInCents, "Customer requested refund");
                 log.info("Stripe refund created for payment: {}", request.getPaymentId());
             }
@@ -121,6 +155,7 @@ public class PaymentService {
 
     public PaymentResponse getPaymentByPaymentId(String paymentId) {
         log.info("Fetching payment with ID: {}", paymentId);
+        paymentSchemaMigration.sanitizePaymentData();
 
         Payment payment = paymentRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found with ID: " + paymentId));
@@ -146,16 +181,19 @@ public class PaymentService {
 
     public List<PaymentResponse> getPaymentsByOrderId(Long orderId) {
         log.info("Fetching payments for order: {}", orderId);
+        paymentSchemaMigration.sanitizePaymentData();
         return mapPaymentsToResponse(paymentRepository.findByOrderId(orderId));
     }
 
     public List<PaymentResponse> getPaymentsByUserId(Long userId) {
         log.info("Fetching payments for user: {}", userId);
+        paymentSchemaMigration.sanitizePaymentData();
         return mapPaymentsToResponse(paymentRepository.findByUserId(userId));
     }
 
     public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
         log.info("Fetching payments with status: {}", status);
+        paymentSchemaMigration.sanitizePaymentData();
         return mapPaymentsToResponse(paymentRepository.findByStatus(status));
     }
 
@@ -163,6 +201,17 @@ public class PaymentService {
         return payments.stream()
                 .map(paymentMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    private boolean requiresStripe(Payment.PaymentMethod paymentMethod) {
+        return paymentMethod == Payment.PaymentMethod.CREDIT_CARD
+                || paymentMethod == Payment.PaymentMethod.DEBIT_CARD
+                || paymentMethod == Payment.PaymentMethod.DIGITAL_WALLET
+                || paymentMethod == Payment.PaymentMethod.PAYPAL;
+    }
+
+    private String generatePaymentId() {
+        return "PAY-" + UUID.randomUUID();
     }
 
     @Transactional
