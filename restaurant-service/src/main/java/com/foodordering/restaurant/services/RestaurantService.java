@@ -44,6 +44,12 @@ public class RestaurantService {
 
     public Restaurant updateRestaurant(Long id, Restaurant updated, UserDTO owner) {
 
+        System.out.println("=== SERVICE ===");
+        System.out.println("THREAD: " + Thread.currentThread().getId());
+        System.out.println("OWNER: " + owner);
+
+        System.out.println(owner.getRole());
+
         authorizeUser(owner, "update this restaurant");
 
         Restaurant restaurant = getRestaurantById(id);
@@ -158,7 +164,5 @@ public class RestaurantService {
         return imageUrl;
 
     }
-
-
 
 }
