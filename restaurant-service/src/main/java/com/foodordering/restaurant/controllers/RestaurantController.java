@@ -1,5 +1,6 @@
 package com.foodordering.restaurant.controllers;
 
+import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.RestaurantDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Restaurant;
@@ -7,6 +8,7 @@ import com.foodordering.restaurant.services.RestaurantService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.SecurityProperties.User;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -30,64 +32,74 @@ public class RestaurantController {
     @GetMapping("/{id}")
     public ResponseEntity<RestaurantDTO> getById(@PathVariable Long id) {
         Restaurant restaurant = restaurantService.getRestaurantById(id);
-        return ResponseEntity.ok(convertToDto(restaurant)); 
+        return ResponseEntity.ok(convertToDto(restaurant));
     }
 
-   @PostMapping
-    public ResponseEntity<RestaurantDTO> add(@RequestBody Restaurant restaurant, 
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
+    @PostMapping
+    public ResponseEntity<RestaurantDTO> add(@RequestBody Restaurant restaurant) {
 
-        UserDTO owner = new UserDTO(userId, role, status);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         Restaurant saved = restaurantService.addRestaurant(restaurant, owner);
-        return new ResponseEntity<>(convertToDto(saved), org.springframework.http.HttpStatus.CREATED); 
+        return new ResponseEntity<>(convertToDto(saved), org.springframework.http.HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<RestaurantDTO> update(@PathVariable Long id, @RequestBody Restaurant restaurant,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
+    public ResponseEntity<RestaurantDTO> update(@PathVariable Long id, @RequestBody Restaurant restaurant) {
+        System.out.println("=== CONTROLLER ===");
+        System.out.println("THREAD: " + Thread.currentThread().getId());
+        System.out.println("USER: " + UserContext.getUser());
 
-        UserDTO owner = new UserDTO(userId, role, status);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         Restaurant updated = restaurantService.updateRestaurant(id, restaurant, owner);
-        return ResponseEntity.ok(convertToDto(updated)); 
+        return ResponseEntity.ok(convertToDto(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id, 
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
 
-        UserDTO owner = new UserDTO(userId, role, status);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         restaurantService.deleteRestaurant(id, owner);
-        return ResponseEntity.noContent().build(); 
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle-status")
     public ResponseEntity<RestaurantDTO> toggleStatus(
-            @PathVariable Long id,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
+            @PathVariable Long id) {
 
-        UserDTO owner = new UserDTO(userId, role, status);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
         Restaurant updatedRestaurant = restaurantService.toggleOpeningStatus(id, owner);
 
         return ResponseEntity.ok(convertToDto(updatedRestaurant)); // Status 200
     }
+
     @PostMapping("/{id}/image")
-    public String uploadRestaurantImage(@PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
+    public ResponseEntity<String> uploadRestaurantImage(@PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
 
-        UserDTO owner = new UserDTO(userId, role, status);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
 
-        return restaurantService.uploadImage(id, file, owner);
+        String url = restaurantService.uploadImage(id, file, owner);
+        return ResponseEntity.ok(url);
+
     }
 
     private RestaurantDTO convertToDto(Restaurant restaurant) {
@@ -101,4 +113,5 @@ public class RestaurantController {
         dto.setOpened(restaurant.isOpened());
         return dto;
     }
+
 }

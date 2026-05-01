@@ -1,11 +1,14 @@
 package com.foodordering.restaurant.controllers;
 
+import com.foodordering.restaurant.config.UserContext;
+import com.foodordering.restaurant.dtos.MenuItemDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.services.MenuItemService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -17,56 +20,74 @@ public class MenuItemController {
     private MenuItemService menuItemService;
 
     @PostMapping("/{restaurantId}")
-    public MenuItem addItem(@PathVariable Long restaurantId,
-            @RequestBody MenuItem item, @RequestHeader("X-User-Id") String id,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
-        UserDTO user = new UserDTO(id, role, status);
-        return menuItemService.addMenuItem(restaurantId, item, user);
+    public ResponseEntity<MenuItem> addItem(@PathVariable Long restaurantId,
+            @RequestBody MenuItem item) {
+
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        MenuItem saved = menuItemService.addMenuItem(restaurantId, item, owner);
+        return ResponseEntity.status(201).body(saved);
     }
 
     @GetMapping("/{restaurantId}")
-    public List<MenuItem> getMenu(@PathVariable Long restaurantId) {
-        return menuItemService.getMenuByRestaurant(restaurantId);
+    public ResponseEntity<List<MenuItem>> getMenu(@PathVariable Long restaurantId) {
+
+        List<MenuItem> items = menuItemService.getMenuByRestaurant(restaurantId);
+        return ResponseEntity.ok(items);
     }
 
     @PutMapping("/{id}")
-    public MenuItem update(@PathVariable Long id, @RequestBody MenuItem item,
-         @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
-                        UserDTO user = new UserDTO(userId, role, status);
+    public ResponseEntity<MenuItem> update(@PathVariable Long id,
+            @RequestBody MenuItem item) {
 
-        return menuItemService.updateMenuItem(id, item, user);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        MenuItem updated = menuItemService.updateMenuItem(id, item, owner);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id,@RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
-                        UserDTO user = new UserDTO(userId, role, status);
-        menuItemService.deleteMenuItem(id,user);
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        menuItemService.deleteMenuItem(id, owner);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/category/{category}")
-    public List<MenuItem> getByCategory(@PathVariable String category) {
-        return menuItemService.getByCategory(category);
+    public ResponseEntity<List<MenuItem>> getByCategory(@PathVariable String category) {
+
+        List<MenuItem> items = menuItemService.getByCategory(category);
+        return ResponseEntity.ok(items);
     }
 
     @GetMapping("/offers")
-    public List<MenuItem> getOffers() {
-        return menuItemService.getOffers();
+    public ResponseEntity<List<MenuItem>> getOffers() {
+
+        List<MenuItem> items = menuItemService.getOffers();
+        return ResponseEntity.ok(items);
     }
 
     @PostMapping("/{id}/image")
-    public String uploadItemImage(@PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
+    public ResponseEntity<String> uploadItemImage(@PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
 
-        UserDTO owner = new UserDTO(userId, role, status);
+        UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            return ResponseEntity.status(401).build();
+        }
 
-        return menuItemService.uploadImage(id, file, owner);
+        String url = menuItemService.uploadImage(id, file, owner);
+        return ResponseEntity.ok(url);
     }
 }
