@@ -53,14 +53,11 @@ public class UserController {
         return authService.refreshToken(request);
     }
 
-    // Kept for manual testing / debug only — gateway no longer calls this
     @PostMapping("/validate")
     public ResponseEntity<?> validateToken(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
         return authService.validateToken(authHeader);
     }
 
-    // Test endpoint — reads the X-User-* headers injected by the gateway
-    // Hit via: GET :8080/auth/test-gateway  with Authorization: Bearer <token>
     @GetMapping("/test-gateway")
     public ResponseEntity<Map<String, String>> testGatewayHeaders(
             @RequestHeader("X-User-Id") String userId,

@@ -1,4 +1,4 @@
-package com.foodordering.user.Dto;
+package com.foodordering.auth.dto.Requests;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,8 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserProfileUpdateRequest {
+public class UserProfileRequest {
+    private Long id;       
     private String fullName;
-    private String phone;
-    private String address;
+    private String type;    
+
 }

@@ -17,6 +17,14 @@ public class RegisterRequest {
     @Size(min = 8, message = "password must be at least 8 characters")
     private String password;
 
+    @NotBlank(message = "fullName is required")
+    private String fullName;
+    public String getFullName() {
+        return fullName;
+    }
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
     public String getEmail() {
         return email;
     }

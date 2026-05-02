@@ -35,29 +35,10 @@ public class Restaurant {
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
     private List<MenuItem> menuItems;
 
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
+    private List<Category> categories;
 
-    // public Long getId() {
-    //     return id;
-    // }
-
-    // public String getName() {
-    //     return name;
-    // }
-
-    // public String getLocation() {
-    //     return location;
-    // }
-
-    // public String getPhone() {
-    //     return phone;
-    // }
-
-    // public String getDescription() {
-    //     return description;
-    // }
-
-    // public List<MenuItem> getMenuItems() {
-    //     return menuItems;
-    // }
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
+    private List<Offer> offers;
 
 }

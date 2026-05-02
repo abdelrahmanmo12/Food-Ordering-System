@@ -50,6 +50,15 @@ spring:
             filters:
               - AuthenticationFilter
 
+
+          # USERSERVICE
+          - id: user-profiles
+            uri: lb://USER-SERVICE
+            predicates:
+              - Path=/users/profiles/**
+            filters:
+              - AuthenticationFilter
+
 eureka:
   instance:
     prefer-ip-address: true 

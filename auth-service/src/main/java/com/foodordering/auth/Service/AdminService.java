@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import com.foodordering.auth.Entity.user;
 import com.foodordering.auth.Enum.AccountStatus;
-import com.foodordering.auth.Enum.Role;
 import com.foodordering.auth.Repo.UserRepo;
 import com.foodordering.auth.dto.Response.PendingAccountResponse;
 

@@ -23,7 +23,6 @@ public class MenuItem {
     private String name;
     private String description;
     private Double price;
-    private String category;
     private Boolean available = true;
     private Double discount;     
 
@@ -36,5 +35,8 @@ public class MenuItem {
     @JsonIgnore
     private Restaurant restaurant;
 
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
 
 }

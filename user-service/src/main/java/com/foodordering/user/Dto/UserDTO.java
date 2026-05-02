@@ -7,8 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserProfileUpdateRequest {
-    private String fullName;
-    private String phone;
-    private String address;
+public class UserDTO {
+    String id;
+    String role;
+    String status;
+
 }

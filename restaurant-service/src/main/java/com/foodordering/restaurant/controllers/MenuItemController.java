@@ -1,7 +1,6 @@
 package com.foodordering.restaurant.controllers;
 
 import com.foodordering.restaurant.config.UserContext;
-import com.foodordering.restaurant.dtos.MenuItemDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.services.MenuItemService;
