@@ -50,6 +50,14 @@ spring:
             filters:
               - AuthenticationFilter
 
+          - id: notification-service
+            uri: lb://NOTIFICATION-SERVICE
+            predicates:
+              - Path=/notifications/**
+              - Method=GET,PATCH
+            filters:
+              - AuthenticationFilter
+
 eureka:
   instance:
     prefer-ip-address: true 
