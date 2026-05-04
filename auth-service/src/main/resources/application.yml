@@ -26,6 +26,13 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
 
+ kafka:
+    topics:
+      user-registered: user-registered
+   spring.kafka.bootstrap-servers: localhost:9092
+   spring.kafka.producer.key-serializer: org.apache.kafka.common.serialization.StringSerializer
+   spring.kafka.producer.value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 
 jwt:
   private:
