@@ -1,4 +1,5 @@
 package com.foodordering.restaurant.services;
+<<<<<<< HEAD
 
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.enums.AdminStatus;
@@ -6,6 +7,11 @@ import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.RestaurantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+=======
+import com.foodordering.restaurant.models.Restaurant;
+import com.foodordering.restaurant.repository.RestaurantRepository;
+import org.springframework.stereotype.Service;
+>>>>>>> origin/Order_service
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -16,9 +22,12 @@ public class RestaurantService {
     @Autowired
     private RestaurantRepository restaurantRepository;
 
+<<<<<<< HEAD
     @Autowired
     private ImageService imageService;
 
+=======
+>>>>>>> origin/Order_service
     public List<Restaurant> getAllRestaurants() {
         return restaurantRepository.findAll();
     }
@@ -28,6 +37,7 @@ public class RestaurantService {
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
     }
 
+<<<<<<< HEAD
     public Restaurant addRestaurant(Restaurant restaurant, UserDTO owner) {
 
         authorizeUser(owner, "add a new restaurant");
@@ -163,6 +173,35 @@ public class RestaurantService {
 
         return imageUrl;
 
+=======
+    public Restaurant addRestaurant(Restaurant restaurant) {
+        return restaurantRepository.save(restaurant);
+    }
+
+    public Restaurant updateRestaurant(Long id, Restaurant updated) {
+        Restaurant r = getRestaurantById(id);
+        r.setName(updated.getName());
+        r.setLocation(updated.getLocation());
+        r.setPhone(updated.getPhone());
+        return restaurantRepository.save(r);
+    }
+
+    public void deleteRestaurant(Long id) {
+        restaurantRepository.deleteById(id);
+    }
+
+    public Restaurant findByName(String name) {
+        return restaurantRepository.findByName(name)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+    }
+
+    public Restaurant getRestaurantByName(String name) {
+        return restaurantRepository.findByName(name)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+    }
+    public List<Restaurant> searchByName(String name) {
+        return restaurantRepository.findByNameContainingIgnoreCase(name);
+>>>>>>> origin/Order_service
     }
 
 }

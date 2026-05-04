@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // package com.foodordering.order.clients;
 
 // import org.springframework.cloud.openfeign.FeignClient;
@@ -10,3 +11,12 @@
 //     @GetMapping("/restaurants/{id}")
 //     String getRestaurant(@PathVariable String id);
 // }
+=======
+package com.foodordering.order.clients;
+
+public @interface FeignClient {
+    String name();
+
+    String url();
+}
+>>>>>>> origin/Order_service

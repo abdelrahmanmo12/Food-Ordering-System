@@ -1,5 +1,6 @@
 package com.foodordering.restaurant.dtos;
 
+<<<<<<< HEAD
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,4 +16,19 @@ public class RestaurantDTO {
     private String description;
     private String imageUrl;
     private boolean isOpened;
+=======
+public class RestaurantDTO {
+    public Long id;
+    public String name;
+    public String location;
+    public String phone;
+
+    public String getId() {
+        return "";
+    }
+
+    public String getName() {
+        return "";
+    }
+>>>>>>> origin/Order_service
 }

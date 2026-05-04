@@ -17,6 +17,11 @@ public class Cart {
     private String id;
 
     private String phone;
+<<<<<<< HEAD
 
     private List<com.foodordering.order.entity.OrderItem> items;
+=======
+    private String restaurantName;
+    private List<OrderItem> items;
+>>>>>>> origin/Order_service
 }
