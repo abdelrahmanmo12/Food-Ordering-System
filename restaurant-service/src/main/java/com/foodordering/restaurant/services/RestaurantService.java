@@ -19,8 +19,8 @@ public class RestaurantService {
     @Autowired
     private ImageService imageService;
 
-    public List<Restaurant> getAllRestaurants() {
-        return restaurantRepository.findAll();
+    public List<Restaurant> getAllPublicRestaurants() {
+        return restaurantRepository.findByStatus(AdminStatus.APPROVED);
     }
 
     public Restaurant getRestaurantById(Long id) {
@@ -165,4 +165,7 @@ public class RestaurantService {
 
     }
 
+    public boolean existsById(Long id) {
+        return restaurantRepository.existsById(id);
+    }
 }

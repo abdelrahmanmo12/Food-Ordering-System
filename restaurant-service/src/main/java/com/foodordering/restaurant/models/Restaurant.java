@@ -36,7 +36,7 @@ public class Restaurant {
     private List<MenuItem> menuItems;
 
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
-    private List<Category> categories;
+    private List<MenuCategory> categories;
 
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
     private List<Offer> offers;

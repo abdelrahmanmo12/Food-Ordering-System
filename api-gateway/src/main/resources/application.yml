@@ -9,10 +9,18 @@ spring:
       gateway:
         routes:
 
-          - id: auth-service
+          - id: auth-service-public
+            uri: lb://AUTH-SERVICE
+            predicates:
+              - Path=/auth/login,/auth/register/**
+
+          - id: auth-service-private
             uri: lb://AUTH-SERVICE
             predicates:
               - Path=/auth/**
+            filters:
+              - AuthenticationFilter
+              
 
           - id: restaurant-admin
             uri: lb://RESTAURANT-SERVICE

@@ -2,19 +2,16 @@ package com.foodordering.user.Service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import com.foodordering.user.Dto.UserDTO;
 import com.foodordering.user.Dto.UserProfileDto;
 import com.foodordering.user.Dto.UserProfileResponse;
 import com.foodordering.user.Dto.UserProfileUpdateRequest;
-import com.foodordering.user.Entity.FoodCategory;
 import com.foodordering.user.Entity.UserProfile;
-import com.foodordering.user.Exception.AlreadyExistsException;
-import com.foodordering.user.Exception.InvalidCategoryException;
 import com.foodordering.user.Exception.ResourceNotFoundException;
 import com.foodordering.user.Exception.UnauthorizedActionException;
 import com.foodordering.user.Repo.UserProfileRepository;
+import com.foodordering.user.config.RestaurantClient;
 
 import jakarta.transaction.Transactional;
 
@@ -23,6 +20,9 @@ public class UserService {
 
     @Autowired
     private UserProfileRepository repository;
+
+    @Autowired
+    private RestaurantClient restaurantClient;
 
     public void saveInitialProfile(UserProfileDto dto) {
         UserProfile profile = new UserProfile();
@@ -83,25 +83,42 @@ public class UserService {
     }
 
     @Transactional
-    public void addFavoriteCategory(UserDTO user, String categoryStr) {
-        Long userId = parseId(user.getId());
+    public void addFavoriteRestaurant(String userid, Long restaurantId) {
+
+        Boolean exists = restaurantClient.checkRestaurantExists(restaurantId);
+
+        if (exists) {
+            Long userId = parseId(userid);
+
+            UserProfile dbUserProfile = repository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+
+            if (!dbUserProfile.getFavRestaurants().contains(restaurantId)) {
+                dbUserProfile.getFavRestaurants().add(restaurantId);
+            }
+        } else {
+            throw new RuntimeException("error: restaurant does not exist");
+        }
+
+    }
+
+    @Transactional
+    public void removeFavoriteRestaurant(String userid, Long restaurantId) {
+        Long userId = parseId(userid);
 
         UserProfile dbUserProfile = repository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile with ID " + userId + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
-        FoodCategory category;
-        try {
-            category = FoodCategory.valueOf(categoryStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidCategoryException("Invalid food category: " + categoryStr);
-        }
-        
-        if (!dbUserProfile.getFavCategories().contains(category)) {
-            dbUserProfile.getFavCategories().add(category);
-            repository.save(dbUserProfile);
-        } else {
-            throw new AlreadyExistsException("Category " + categoryStr + " is already in your favorites");
-        }
+        dbUserProfile.getFavRestaurants().removeIf(id -> id.equals(restaurantId));
+    }
+
+    public List<Long> getFavoriteRestaurants(String userid) {
+        Long userId = parseId(userid);
+
+        UserProfile dbUserProfile = repository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+
+        return dbUserProfile.getFavRestaurants();
     }
 
     private void applyPartialUpdates(UserProfile userProfile, UserProfileUpdateRequest updated) {

@@ -5,10 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import lombok.Getter;
@@ -27,8 +26,9 @@ public class UserProfile {
     private String phoneNumber;
     private String address;
 
-    @ElementCollection(targetClass = FoodCategory.class)
-    @CollectionTable(name = "user_fav_categories", joinColumns = @JoinColumn(name = "user_id"))
-    @Enumerated(EnumType.STRING)
-    private List<FoodCategory> favCategories = new ArrayList<>();;
+    @ElementCollection
+    @CollectionTable(name = "user_fav_restaurants", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "restaurant_id")
+    private List<Long> favRestaurants = new ArrayList<>();
+
 }

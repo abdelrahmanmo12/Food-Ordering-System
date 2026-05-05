@@ -2,7 +2,9 @@ package com.foodordering.restaurant.controllers;
 
 import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.UserDTO;
+import com.foodordering.restaurant.models.MenuCategory;
 import com.foodordering.restaurant.models.MenuItem;
+import com.foodordering.restaurant.services.MenuCategoryService;
 import com.foodordering.restaurant.services.MenuItemService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +19,9 @@ public class MenuItemController {
 
     @Autowired
     private MenuItemService menuItemService;
+
+    @Autowired
+    private MenuCategoryService menuCategoryService;
 
     @PostMapping("/{restaurantId}")
     public ResponseEntity<MenuItem> addItem(@PathVariable Long restaurantId,
@@ -88,5 +93,32 @@ public class MenuItemController {
 
         String url = menuItemService.uploadImage(id, file, owner);
         return ResponseEntity.ok(url);
+    }
+
+    @PostMapping("/categories/{restaurantId}")
+    public ResponseEntity<MenuCategory> createCategory(@PathVariable Long restaurantId, 
+                                                     @RequestBody MenuCategory category) {
+        UserDTO owner = UserContext.getUser();
+        MenuCategory saved = menuCategoryService.addCategory(restaurantId, category, owner);
+        return ResponseEntity.status(201).body(saved);
+    }
+
+    @GetMapping("/categories/restaurant/{restaurantId}")
+    public ResponseEntity<List<MenuCategory>> getCategoriesByRestaurant(@PathVariable Long restaurantId) {
+        return ResponseEntity.ok(menuCategoryService.getCategoriesByRestaurant(restaurantId));
+    }
+
+    @PutMapping("/categories/{id}")
+    public ResponseEntity<MenuCategory> updateCategory(@PathVariable Long id, 
+                                                     @RequestBody MenuCategory category) {
+        UserDTO owner = UserContext.getUser();
+        return ResponseEntity.ok(menuCategoryService.updateCategory(id, category, owner));
+    }
+
+    @DeleteMapping("/categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        UserDTO owner = UserContext.getUser();
+        menuCategoryService.deleteCategory(id, owner);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -3,8 +3,10 @@ package com.foodordering.restaurant.controllers;
 import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.RestaurantDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
+import com.foodordering.restaurant.models.Offer;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.services.RestaurantService;
+import com.foodordering.restaurant.services.OfferService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +21,12 @@ public class RestaurantController {
     @Autowired
     private RestaurantService restaurantService;
 
+    @Autowired
+    private OfferService offerService;
+
     @GetMapping
-    public ResponseEntity<List<RestaurantDTO>> getAll() {
-        List<RestaurantDTO> restaurants = restaurantService.getAllRestaurants()
+    public ResponseEntity<List<RestaurantDTO>> getPublicRestaurants() {
+        List<RestaurantDTO> restaurants = restaurantService.getAllPublicRestaurants()
                 .stream()
                 .map(this::convertToDto)
                 .toList();
@@ -113,4 +118,30 @@ public class RestaurantController {
         return dto;
     }
 
+    @PostMapping("/{restaurantId}/offers")
+    public ResponseEntity<Offer> createOffer(@PathVariable Long restaurantId, 
+                                           @RequestBody Offer offer) {
+        UserDTO owner = UserContext.getUser();
+        return ResponseEntity.status(201).body(offerService.createOffer(restaurantId, offer, owner));
+    }
+
+    @GetMapping("/offers/active")
+    public ResponseEntity<List<Offer>> getActiveOffers() {
+        return ResponseEntity.ok(offerService.getAllActiveOffers());
+    }
+
+    @DeleteMapping("/offers/{id}")
+    public ResponseEntity<Void> deleteOffer(@PathVariable Long id) {
+        UserDTO owner = UserContext.getUser();
+        offerService.deleteOffer(id, owner);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    @GetMapping("/internal/exists/{id}")
+    public ResponseEntity<Boolean> exists(@PathVariable Long id) {
+
+        boolean isFound = restaurantService.existsById(id); 
+        return ResponseEntity.ok(isFound);
+    }
 }

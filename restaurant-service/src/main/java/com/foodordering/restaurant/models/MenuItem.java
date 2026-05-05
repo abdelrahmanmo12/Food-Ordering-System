@@ -37,6 +37,7 @@ public class MenuItem {
 
     @ManyToOne
     @JoinColumn(name = "category_id")
-    private Category category;
+    @JsonIgnore
+    private MenuCategory category;
 
 }

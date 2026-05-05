@@ -73,7 +73,7 @@ public class MenuItemService {
     }
 
     public List<MenuItem> getByCategory(String category) {
-        return menuItemRepository.findByCategory(category);
+        return menuItemRepository.findByCategoryName(category);
     }
 
     public List<MenuItem> getOffers() {

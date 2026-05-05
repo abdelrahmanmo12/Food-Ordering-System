@@ -11,13 +11,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "categories")
-public class Category {
+public class MenuCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name; 
+    private boolean Active = true;
     
     public void setName(String name) {
         this.name = name;
@@ -29,9 +30,4 @@ public class Category {
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     private List<MenuItem> menuItems;
-
-
-
-
-
 }

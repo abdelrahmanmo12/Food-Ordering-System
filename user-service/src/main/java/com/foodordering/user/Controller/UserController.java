@@ -6,13 +6,13 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -67,17 +67,29 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Profile updated"));
     }
 
-    @PostMapping("/profiles/favourites")
-    public ResponseEntity<String> addFavoriteCategory(
+    @PostMapping("/profiles/favourites/{restaurantId}")
+    public ResponseEntity<String> addFavoriteRestaurant(
             @RequestHeader(value = "X-User-Id") String userId,
-            @RequestHeader(value = "X-User-Role") String role,
-            @RequestHeader(value = "X-User-Status") String status,
-            @RequestParam String category) {
+            @PathVariable Long restaurantId) {
 
-        UserDTO user = new UserDTO(userId, role, status);
 
-        userService.addFavoriteCategory(user, category);
-        return ResponseEntity.ok("Category added to your favorites");
+        userService.addFavoriteRestaurant(userId, restaurantId);
+        return ResponseEntity.ok("Restaurant added to your favorites!");
     }
 
+    @DeleteMapping("/profiles/favourites/{restaurantId}")
+    public ResponseEntity<String> removeFavoriteRestaurant(
+            @RequestHeader(value = "X-User-Id") String userId,
+            @PathVariable Long restaurantId) {
+
+        userService.removeFavoriteRestaurant(userId, restaurantId);
+        return ResponseEntity.ok("Restaurant removed from your favorites!");
+    }
+
+    @GetMapping("/profiles/favourites")
+    public ResponseEntity<List<Long>> getFavoriteRestaurants(
+            @RequestHeader(value = "X-User-Id") String userId) {
+
+        return ResponseEntity.ok(userService.getFavoriteRestaurants(userId));
+    }
 }
