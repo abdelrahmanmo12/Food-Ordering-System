@@ -2,21 +2,12 @@ package com.foodordering.order.repositories;
 
 import com.foodordering.order.entity.Order;
 import org.springframework.data.mongodb.repository.MongoRepository;
-<<<<<<< HEAD
-
-public interface OrderRepository extends MongoRepository<Order, String> {
-=======
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
-
-    List<Order> findByPhone(String phone);
-    List<Order> findByRestaurantName(String restaurantName);
-    Optional<Order> findByOrderNumber(String orderNumber);
-
->>>>>>> origin/Order_service
+    List<Order> findByUserId(String userId);
+    List<Order> findByRestaurantId(String restaurantId);
 }
