@@ -1,94 +1,74 @@
-<<<<<<< HEAD
-// // package com.foodordering.order.controllers;
-
-// import com.foodordering.order.entity.Order;
-// import com.foodordering.order.services.OrderService;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.web.bind.annotation.*;
-
-// @RestController
-// @RequestMapping("/orders")
-// public class OrderController {
-
-//     @Autowired
-//     OrderService orderService;
-
-//     @PostMapping
-//     public Order createOrder(@RequestBody Order order) {
-//         return orderService.createOrder(order);
-//     }
-// }
-=======
 package com.foodordering.order.controllers;
 
-import com.foodordering.order.DTOs.*;
-import com.foodordering.order.entity.OrderStatus;
-import com.foodordering.order.services.OrderServiceImpl;
+import com.foodordering.order.entity.Order;
+import com.foodordering.order.kafka.events.OrderPlacedEvent;
+import com.foodordering.order.repositories.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/orders")
 @RequiredArgsConstructor
+@Slf4j
 public class OrderController {
 
-    private final OrderServiceImpl service;
+    private final OrderRepository orderRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    @Value("${kafka.topics.order-placed}")
+    private String orderPlacedTopic;
+
+    /**
+     * POST /orders
+     * Creates a new order and publishes OrderPlacedEvent to Kafka.
+     * Requires X-User-Id header (injected by API Gateway).
+     */
     @PostMapping
-    public ResponseEntity<OrderCreationResponse> createOrder(@RequestBody OrderRequest request) {
-        return ResponseEntity.ok(service.createOrder(request));
+    public ResponseEntity<Order> createOrder(
+            @RequestBody Order order,
+            @RequestHeader("X-User-Id") String userId) {
+
+        order.setUserId(userId);
+        Order saved = orderRepository.save(order);
+
+        // ── Publish event to Kafka ──────────────────────────────────────────
+        OrderPlacedEvent event = new OrderPlacedEvent(
+                saved.getId(),
+                saved.getUserId(),
+                saved.getRestaurantId(),
+                saved.getTotalPrice()
+        );
+        kafkaTemplate.send(orderPlacedTopic, event);
+        log.info("[KAFKA] Published OrderPlacedEvent for orderId={}, userId={}", saved.getId(), saved.getUserId());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    @GetMapping("/orders/me/{phone}")
-    public ResponseEntity<List<OrderResponse>> getMyOrders(@PathVariable String phone) {
-        return ResponseEntity.ok(service.getOrders(phone));
+    /**
+     * GET /orders/my
+     * Returns all orders for the authenticated user.
+     */
+    @GetMapping("/my")
+    public ResponseEntity<List<Order>> getMyOrders(
+            @RequestHeader("X-User-Id") String userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+        return ResponseEntity.ok(orders);
     }
 
-    @DeleteMapping("/cancel/{id}")
-    public ResponseEntity<String> cancel(@PathVariable String id) {
-        service.cancelOrder(id);
-        return ResponseEntity.ok("Order cancelled successfully");
-    }
-
-
-    @GetMapping("/admin/all")
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return ResponseEntity.ok(service.getAllOrders());
-    }
-
-    @PutMapping("/admin/{id}/status")
-    public ResponseEntity<OrderResponse> updateStatus(
-            @PathVariable String id,
-            @RequestParam OrderStatus status) {
-        return ResponseEntity.ok(service.updateOrderStatus(id, status));
-    }
-
-    @DeleteMapping("/admin/{id}")
-    public ResponseEntity<String> deleteOrder(@PathVariable String id) {
-        service.deleteOrder(id);
-        return ResponseEntity.ok("Order deleted successfully");
-    }
-
-
-    @GetMapping("/restaurant/{restaurantName}")
-    public ResponseEntity<List<RestaurantOrderResponse>> getOrdersByRestaurant(
-            @PathVariable String restaurantName) {
-        return ResponseEntity.ok(service.getOrdersByRestaurant(restaurantName));
-    }
-
-    @PutMapping("/restaurant/{orderNumber}/status")
-    public ResponseEntity<OrderResponse> updateOrderStatus(
-            @PathVariable String orderNumber,
-            @RequestParam OrderStatus status) {
-        return ResponseEntity.ok(service.updateOrderStatus(orderNumber, status));
-    }
-
-    @GetMapping("/track/{orderNumber}")
-    public ResponseEntity<OrderTrackingResponse> trackOrder(@PathVariable String orderNumber) {
-        return ResponseEntity.ok(service.trackOrder(orderNumber));
+    /**
+     * GET /orders/{id}
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Order> getOrder(@PathVariable String id) {
+        return orderRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
->>>>>>> origin/Order_service
