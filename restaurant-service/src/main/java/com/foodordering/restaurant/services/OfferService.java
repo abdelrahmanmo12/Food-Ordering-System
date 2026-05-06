@@ -1,10 +1,13 @@
 package com.foodordering.restaurant.services;
 
+import com.foodordering.restaurant.aspect.Interfaces.CheckOwnerAndAdmin;
+import com.foodordering.restaurant.aspect.Interfaces.OnlySpecificOwner;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Offer;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.OfferRepository;
 import com.foodordering.restaurant.repository.RestaurantRepository;
+import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,21 +23,10 @@ public class OfferService {
     @Autowired
     private RestaurantRepository restaurantRepository;
 
-    @Autowired
-    private RestaurantService restaurantService;
-
-    private void validateAccess(Restaurant restaurant, UserDTO user, String action) {
-        restaurantService.authorizeUser(user, action);
-        if (!"ADMIN".equals(user.getRole())) {
-            restaurantService.isTheSameOwner(restaurant, user);
-        }
-    }
-
-    public Offer createOffer(Long restaurantId, Offer offer, UserDTO owner) {
+    @OnlySpecificOwner
+    public Offer createOffer(Long restaurantId, UserDTO owner, Offer offer) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-
-        validateAccess(restaurant, owner, "create an offer");
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         offer.setRestaurant(restaurant);
         return offerRepository.save(offer);
@@ -45,11 +37,10 @@ public class OfferService {
         return offerRepository.findByStartDateBeforeAndEndDateAfter(now, now);
     }
 
-    public Offer updateOffer(Long id, Offer updatedOffer, UserDTO owner) {
+    @OnlySpecificOwner
+    public Offer updateOffer(Long id, UserDTO owner, Offer updatedOffer) {
         Offer offer = offerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Offer not found"));
-
-        validateAccess(offer.getRestaurant(), owner, "update an offer");
+                .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));
 
         if (updatedOffer.getTitle() != null && !updatedOffer.getTitle().isEmpty()) {
             offer.setTitle(updatedOffer.getTitle());
@@ -70,11 +61,11 @@ public class OfferService {
         return offerRepository.save(offer);
     }
 
+    @CheckOwnerAndAdmin
     public void deleteOffer(Long id, UserDTO owner) {
-        Offer offer = offerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Offer not found"));
+        offerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));
 
-        validateAccess(offer.getRestaurant(), owner, "delete an offer");
         offerRepository.deleteById(id);
     }
 }

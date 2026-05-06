@@ -1,10 +1,11 @@
 package com.foodordering.auth.Entity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,7 +28,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class user  implements UserDetails{
+public class User  implements UserDetails{
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,13 +47,6 @@ public class user  implements UserDetails{
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
 
-    public AccountStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(AccountStatus status) {
-        this.status = status;
-    }
 
     public boolean isBanned() {
         return status == AccountStatus.BANNED;
@@ -62,54 +56,20 @@ public class user  implements UserDetails{
         return status == AccountStatus.REJECTED;
     }
 
-    
-
-
-    
-
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private Instant updatedAt;
+    
 
-
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-
-
-    public Role getRole() {
-        return role;
-    }
-    public void setRole(Role role) {
-        this.role = role;
-    }
-    public long getUser_id() {
-        return user_id;
-    }
-    public void setUser_id(long user_id) {
-        this.user_id = user_id;
-    }
-    public String getEmail() {
-        return email;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
     @Override
     public String getUsername() {
         return email; // For UserDetails compliance
     }
-    public String getPassword() {
-        return password;
-    }
-    public void setPassword(String password) {
-        this.password = password;
-    }
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // TODO Auto-generated method stub
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.role.name()));
     }
 
@@ -125,7 +85,7 @@ public class user  implements UserDetails{
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return status != AccountStatus.BANNED;
     }
 
     @Override

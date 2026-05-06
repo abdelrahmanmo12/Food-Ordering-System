@@ -1,10 +1,13 @@
 package com.foodordering.restaurant.services;
 
+import com.foodordering.restaurant.aspect.Interfaces.CheckOwnerAndAdmin;
+import com.foodordering.restaurant.aspect.Interfaces.OnlySpecificOwner;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.MenuCategory;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.MenuCategoryRepository;
 import com.foodordering.restaurant.repository.RestaurantRepository;
+import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,23 +20,12 @@ public class MenuCategoryService {
     private MenuCategoryRepository menuCategoryRepository;
 
     @Autowired
-    private RestaurantService restaurantService;
-
-    @Autowired
     private RestaurantRepository restaurantRepository;
 
-    private void validateAccess(Restaurant restaurant, UserDTO user, String action) {
-        restaurantService.authorizeUser(user, action);
-        if (!"ADMIN".equals(user.getRole())) {
-            restaurantService.isTheSameOwner(restaurant, user);
-        }
-    }
-
-    public MenuCategory addCategory(Long restaurantId, MenuCategory category, UserDTO owner) {
+    @OnlySpecificOwner
+    public MenuCategory addCategory(Long restaurantId, UserDTO owner, MenuCategory category) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-
-        validateAccess(restaurant, owner, "add a menu category");
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         category.setRestaurant(restaurant);
         return menuCategoryRepository.save(category);
@@ -43,11 +35,10 @@ public class MenuCategoryService {
         return menuCategoryRepository.findByRestaurantId(restaurantId);
     }
 
-    public MenuCategory updateCategory(Long id, MenuCategory updatedCategory, UserDTO owner) {
+    @OnlySpecificOwner
+    public MenuCategory updateCategory(Long id, UserDTO owner, MenuCategory updatedCategory) {
         MenuCategory category = menuCategoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu category not found"));
-
-        validateAccess(category.getRestaurant(), owner, "update a menu category");
+                .orElseThrow(() -> new ResourceNotFoundException("Menu category not found"));
 
         if (updatedCategory.getName() != null && !updatedCategory.getName().isEmpty()) {
             category.setName(updatedCategory.getName());
@@ -56,11 +47,10 @@ public class MenuCategoryService {
         return menuCategoryRepository.save(category);
     }
 
+    @CheckOwnerAndAdmin
     public void deleteCategory(Long id, UserDTO owner) {
-        MenuCategory category = menuCategoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu category not found"));
-
-        validateAccess(category.getRestaurant(), owner, "delete a menu category");
+        menuCategoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Menu category not found"));
 
         menuCategoryRepository.deleteById(id);
     }

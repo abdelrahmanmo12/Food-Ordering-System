@@ -2,18 +2,19 @@ package com.foodordering.user.Service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
+import com.foodordering.user.Aspect.Interfaces.AdminOnly;
+import com.foodordering.user.Aspect.Interfaces.CheckSameUser;
 import com.foodordering.user.Dto.UserDTO;
 import com.foodordering.user.Dto.UserProfileDto;
 import com.foodordering.user.Dto.UserProfileResponse;
 import com.foodordering.user.Dto.UserProfileUpdateRequest;
 import com.foodordering.user.Entity.UserProfile;
 import com.foodordering.user.Exception.ResourceNotFoundException;
-import com.foodordering.user.Exception.UnauthorizedActionException;
 import com.foodordering.user.Repo.UserProfileRepository;
 import com.foodordering.user.config.RestaurantClient;
-
-import jakarta.transaction.Transactional;
 
 @Service
 public class UserService {
@@ -33,6 +34,7 @@ public class UserService {
         repository.save(profile);
     }
 
+    @Transactional(readOnly = true)
     public UserProfileResponse getMyProfile(UserDTO user) {
         Long userId = parseId(user.getId());
 
@@ -41,7 +43,6 @@ public class UserService {
                         profile.getId(),
                         profile.getFullName(),
                         profile.getType(),
-                        user.getStatus(),
                         profile.getAddress(),
                         profile.getPhoneNumber()))
                 .orElseThrow(() -> new ResourceNotFoundException("Profile with ID " + userId + " not found"));
@@ -55,27 +56,21 @@ public class UserService {
         }
     }
 
+    @AdminOnly
     public List<UserProfileResponse> getAllProfiles(UserDTO user) {
-        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
-            throw new UnauthorizedActionException("Access denied: Only admins can view all profiles");
-        }
 
         return repository.findAll().stream()
                 .map(profile -> new UserProfileResponse(profile.getId(), profile.getFullName(), profile.getType(),
-                        user.getStatus(), profile.getAddress(), profile.getPhoneNumber()))
+                        profile.getAddress(), profile.getPhoneNumber()))
                 .toList();
     }
 
     @Transactional
-    public void updateProfile(Long id, UserProfileUpdateRequest request, UserDTO user) {
-        Long userId = parseId(user.getId());
+    @CheckSameUser
+    public void updateProfile(Long id, UserDTO user, UserProfileUpdateRequest request) {
 
-        if (!id.equals(userId)) {
-            throw new UnauthorizedActionException("Access denied: You can only update your own profile");
-        }
-
-        UserProfile dbUserProfile = repository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile with ID " + userId + " not found"));
+        UserProfile dbUserProfile = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile with ID " + id + " not found"));
 
         applyPartialUpdates(dbUserProfile, request);
         repository.save(dbUserProfile);
@@ -83,39 +78,40 @@ public class UserService {
     }
 
     @Transactional
-    public void addFavoriteRestaurant(String userid, Long restaurantId) {
+    @CheckSameUser
+    public void addFavoriteRestaurant(Long id, UserDTO user, Long restaurantId) {
 
         Boolean exists = restaurantClient.checkRestaurantExists(restaurantId);
 
         if (exists) {
-            Long userId = parseId(userid);
 
-            UserProfile dbUserProfile = repository.findById(userId)
+            UserProfile dbUserProfile = repository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
             if (!dbUserProfile.getFavRestaurants().contains(restaurantId)) {
                 dbUserProfile.getFavRestaurants().add(restaurantId);
             }
         } else {
-            throw new RuntimeException("error: restaurant does not exist");
+            throw new ResourceNotFoundException("Restaurant does not exist");
         }
 
     }
 
     @Transactional
-    public void removeFavoriteRestaurant(String userid, Long restaurantId) {
-        Long userId = parseId(userid);
+    @CheckSameUser
+    public void removeFavoriteRestaurant(Long id, UserDTO user, Long restaurantId) {
 
-        UserProfile dbUserProfile = repository.findById(userId)
+        UserProfile dbUserProfile = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
-        dbUserProfile.getFavRestaurants().removeIf(id -> id.equals(restaurantId));
+        dbUserProfile.getFavRestaurants().removeIf(favId -> favId.equals(restaurantId));
     }
 
-    public List<Long> getFavoriteRestaurants(String userid) {
-        Long userId = parseId(userid);
+    @Transactional(readOnly = true)
+    @CheckSameUser
+    public List<Long> getFavoriteRestaurants(Long id, UserDTO user) {
 
-        UserProfile dbUserProfile = repository.findById(userId)
+        UserProfile dbUserProfile = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         return dbUserProfile.getFavRestaurants();

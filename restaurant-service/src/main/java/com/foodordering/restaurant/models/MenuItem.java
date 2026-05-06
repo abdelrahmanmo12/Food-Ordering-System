@@ -1,15 +1,17 @@
 package com.foodordering.restaurant.models;
 
+import java.time.Instant;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
-@Table(
-    uniqueConstraints = @UniqueConstraint(columnNames = {"name", "restaurant_id"})
-)
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = { "name", "restaurant_id" }))
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,11 +26,18 @@ public class MenuItem {
     private String description;
     private Double price;
     private Boolean available = true;
-    private Double discount;     
+    private Double discount;
 
-    @Column(name = "image_url") 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private Instant createdAt;
+    
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private Instant updatedAt;
+
+    @Column(name = "image_url")
     private String imageUrl;
-
 
     @ManyToOne
     @JoinColumn(name = "restaurant_id")

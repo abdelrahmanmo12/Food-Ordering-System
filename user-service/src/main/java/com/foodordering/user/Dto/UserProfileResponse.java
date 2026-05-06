@@ -11,7 +11,6 @@ public class UserProfileResponse {
     private Long profileId;
     private String fullName;
     private String type;
-    private String status;
     private String address;
     private String phone;
 

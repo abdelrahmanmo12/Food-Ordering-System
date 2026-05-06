@@ -1,7 +1,6 @@
 package com.foodordering.restaurant.models;
 
-import java.time.LocalDateTime;
-
+import java.time.Instant;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,8 +20,8 @@ public class Offer {
     private String title;
     private String description;
     private Double discountPercentage;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private Instant startDate;
+    private Instant endDate;
 
     @ManyToOne
     @JoinColumn(name = "restaurant_id")

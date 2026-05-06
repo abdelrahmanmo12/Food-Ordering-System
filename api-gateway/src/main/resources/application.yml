@@ -12,7 +12,7 @@ spring:
           - id: auth-service-public
             uri: lb://AUTH-SERVICE
             predicates:
-              - Path=/auth/login,/auth/register/**
+              - Path=/auth/login,/auth/register/**,/auth/refresh
 
           - id: auth-service-private
             uri: lb://AUTH-SERVICE
@@ -33,7 +33,7 @@ spring:
           - id: restaurant-public
             uri: lb://RESTAURANT-SERVICE
             predicates:
-              - Path=/restaurants
+              - Path=/restaurants/**
               - Method=GET
 
           - id: menu-public

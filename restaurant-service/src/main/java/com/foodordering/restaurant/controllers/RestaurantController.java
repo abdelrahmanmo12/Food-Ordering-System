@@ -47,7 +47,7 @@ public class RestaurantController {
             return ResponseEntity.status(401).build();
         }
 
-        Restaurant saved = restaurantService.addRestaurant(restaurant, owner);
+        Restaurant saved = restaurantService.addRestaurant(owner, restaurant);
         return new ResponseEntity<>(convertToDto(saved), org.springframework.http.HttpStatus.CREATED);
     }
 
@@ -62,7 +62,7 @@ public class RestaurantController {
             return ResponseEntity.status(401).build();
         }
 
-        Restaurant updated = restaurantService.updateRestaurant(id, restaurant, owner);
+        Restaurant updated = restaurantService.updateRestaurant(id, owner, restaurant);
         return ResponseEntity.ok(convertToDto(updated));
     }
 
@@ -88,7 +88,6 @@ public class RestaurantController {
         }
 
         Restaurant updatedRestaurant = restaurantService.toggleOpeningStatus(id, owner);
-
         return ResponseEntity.ok(convertToDto(updatedRestaurant)); // Status 200
     }
 
@@ -101,9 +100,20 @@ public class RestaurantController {
             return ResponseEntity.status(401).build();
         }
 
-        String url = restaurantService.uploadImage(id, file, owner);
+        String url = restaurantService.uploadImage(id, owner, file);
         return ResponseEntity.ok(url);
 
+    }
+
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<Void> deleteRestaurantImage(@PathVariable Long id) {
+        UserDTO admin = UserContext.getUser();
+        if (admin == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        restaurantService.deleteImage(id, admin);
+        return ResponseEntity.noContent().build();
     }
 
     private RestaurantDTO convertToDto(Restaurant restaurant) {
@@ -122,12 +132,19 @@ public class RestaurantController {
     public ResponseEntity<Offer> createOffer(@PathVariable Long restaurantId, 
                                            @RequestBody Offer offer) {
         UserDTO owner = UserContext.getUser();
-        return ResponseEntity.status(201).body(offerService.createOffer(restaurantId, offer, owner));
+        return ResponseEntity.status(201).body(offerService.createOffer(restaurantId, owner, offer));
     }
 
     @GetMapping("/offers/active")
     public ResponseEntity<List<Offer>> getActiveOffers() {
         return ResponseEntity.ok(offerService.getAllActiveOffers());
+    }
+
+    @PutMapping("/offers/{id}")
+    public ResponseEntity<Offer> updateOffer(@PathVariable Long id, @RequestBody Offer offer) {
+        UserDTO owner = UserContext.getUser();
+        Offer updatedOffer = offerService.updateOffer(id, owner, offer);
+        return ResponseEntity.ok(updatedOffer);
     }
 
     @DeleteMapping("/offers/{id}")

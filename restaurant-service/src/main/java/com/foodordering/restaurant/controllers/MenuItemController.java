@@ -32,7 +32,7 @@ public class MenuItemController {
             return ResponseEntity.status(401).build();
         }
 
-        MenuItem saved = menuItemService.addMenuItem(restaurantId, item, owner);
+        MenuItem saved = menuItemService.addMenuItem(restaurantId, owner, item);
         return ResponseEntity.status(201).body(saved);
     }
 
@@ -52,7 +52,7 @@ public class MenuItemController {
             return ResponseEntity.status(401).build();
         }
 
-        MenuItem updated = menuItemService.updateMenuItem(id, item, owner);
+        MenuItem updated = menuItemService.updateMenuItem(id, owner, item);
         return ResponseEntity.ok(updated);
     }
 
@@ -91,7 +91,7 @@ public class MenuItemController {
             return ResponseEntity.status(401).build();
         }
 
-        String url = menuItemService.uploadImage(id, file, owner);
+        String url = menuItemService.uploadImage(id, owner, file);
         return ResponseEntity.ok(url);
     }
 
@@ -99,7 +99,7 @@ public class MenuItemController {
     public ResponseEntity<MenuCategory> createCategory(@PathVariable Long restaurantId, 
                                                      @RequestBody MenuCategory category) {
         UserDTO owner = UserContext.getUser();
-        MenuCategory saved = menuCategoryService.addCategory(restaurantId, category, owner);
+        MenuCategory saved = menuCategoryService.addCategory(restaurantId, owner, category);
         return ResponseEntity.status(201).body(saved);
     }
 
@@ -112,7 +112,7 @@ public class MenuItemController {
     public ResponseEntity<MenuCategory> updateCategory(@PathVariable Long id, 
                                                      @RequestBody MenuCategory category) {
         UserDTO owner = UserContext.getUser();
-        return ResponseEntity.ok(menuCategoryService.updateCategory(id, category, owner));
+        return ResponseEntity.ok(menuCategoryService.updateCategory(id, owner, category));
     }
 
     @DeleteMapping("/categories/{id}")

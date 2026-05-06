@@ -62,7 +62,7 @@ public class UserController {
             @RequestHeader(value = "X-User-Status") String status) {
 
         UserDTO user = new UserDTO(userId, role, status);
-        userService.updateProfile(id, request, user);
+        userService.updateProfile(id, user, request);
 
         return ResponseEntity.ok(Map.of("message", "Profile updated"));
     }
@@ -70,26 +70,34 @@ public class UserController {
     @PostMapping("/profiles/favourites/{restaurantId}")
     public ResponseEntity<String> addFavoriteRestaurant(
             @RequestHeader(value = "X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status") String status,
             @PathVariable Long restaurantId) {
 
-
-        userService.addFavoriteRestaurant(userId, restaurantId);
+        UserDTO user = new UserDTO(userId, role, status);
+        userService.addFavoriteRestaurant(Long.valueOf(userId), user, restaurantId);
         return ResponseEntity.ok("Restaurant added to your favorites!");
     }
 
     @DeleteMapping("/profiles/favourites/{restaurantId}")
     public ResponseEntity<String> removeFavoriteRestaurant(
             @RequestHeader(value = "X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status") String status,
             @PathVariable Long restaurantId) {
 
-        userService.removeFavoriteRestaurant(userId, restaurantId);
+        UserDTO user = new UserDTO(userId, role, status);
+        userService.removeFavoriteRestaurant(Long.valueOf(userId), user, restaurantId);
         return ResponseEntity.ok("Restaurant removed from your favorites!");
     }
 
     @GetMapping("/profiles/favourites")
     public ResponseEntity<List<Long>> getFavoriteRestaurants(
-            @RequestHeader(value = "X-User-Id") String userId) {
+            @RequestHeader(value = "X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status") String status) {
 
-        return ResponseEntity.ok(userService.getFavoriteRestaurants(userId));
+        UserDTO user = new UserDTO(userId, role, status);
+        return ResponseEntity.ok(userService.getFavoriteRestaurants(Long.valueOf(userId), user));
     }
 }

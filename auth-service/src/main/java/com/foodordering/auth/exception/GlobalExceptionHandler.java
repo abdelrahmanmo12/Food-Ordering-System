@@ -1,9 +1,9 @@
 package com.foodordering.auth.exception;
 
 import org.springframework.security.access.AccessDeniedException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,78 +12,86 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.foodordering.auth.dto.Response.ErrorResponse;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private Map<String, Object> buildErrorResponse(HttpStatus status, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", status.value());
+        response.put("error", status.getReasonPhrase());
+        response.put("message", message);
+        return response;
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<?> handleUserNotFound(UserNotFoundException ex) {
+    public ResponseEntity<Map<String, Object>> handleUserNotFound(UserNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidPasswordException.class)
-    public ResponseEntity<?> handleInvalidPassword(InvalidPasswordException ex) {
+    public ResponseEntity<Map<String, Object>> handleInvalidPassword(InvalidPasswordException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(
+    public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException ex) {
-
-        Map<String, String> errors = new HashMap<>();
-
-        ex.getBindingResult().getFieldErrors().forEach(error -> {
-            errors.put(error.getField(), error.getDefaultMessage());
-        });
-
-        return ResponseEntity.badRequest().body(errors);
+        
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+                
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, message));
     }
 
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<?> handleInvalidToken(InvalidTokenException ex) {
+    public ResponseEntity<Map<String, Object>> handleInvalidToken(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage()));
     }
 
     @ExceptionHandler(RefreshTokenExpiredException.class)
-    public ResponseEntity<?> handleExpired(RefreshTokenExpiredException ex) {
+    public ResponseEntity<Map<String, Object>> handleExpired(RefreshTokenExpiredException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage()));
     }
 
     @ExceptionHandler(UsernameAlreadyExistsException.class)
-    public ResponseEntity<?> handleUserAlreadyExisEntity(UsernameAlreadyExistsException ex) {
+    public ResponseEntity<Map<String, Object>> handleUserAlreadyExists(UsernameAlreadyExistsException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
-        return ResponseEntity.status(500)
-                .body(new ErrorResponse("An unexpected error occurred"));
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"));
     }
 
-   @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.FORBIDDEN.value());
-        body.put("error", "Forbidden");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN); // 👈 خلي دي FORBIDDEN مش BAD_REQUEST
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage()));
     }
 
     @ExceptionHandler(DisabledException.class)
-    public ResponseEntity<Object> handleDisabledException(DisabledException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("message", "This account is deactivated");
-        body.put("status", HttpStatus.FORBIDDEN.value());
+    public ResponseEntity<Map<String, Object>> handleDisabledException(DisabledException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(buildErrorResponse(HttpStatus.FORBIDDEN, "This account is deactivated"));
+    }
 
-        return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
+    @ExceptionHandler(InvalidStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidStatusException(InvalidStatusException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 }
