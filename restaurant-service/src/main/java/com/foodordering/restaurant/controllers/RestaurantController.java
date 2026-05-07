@@ -5,6 +5,9 @@ import com.foodordering.restaurant.dtos.RestaurantDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.services.RestaurantService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,7 +39,7 @@ public class RestaurantController {
     }
 
     @PostMapping
-    public ResponseEntity<RestaurantDTO> add(@RequestBody Restaurant restaurant) {
+    public ResponseEntity<RestaurantDTO> add(@RequestBody @Valid Restaurant restaurant) {
 
         UserDTO owner = UserContext.getUser();
         if (owner == null) {

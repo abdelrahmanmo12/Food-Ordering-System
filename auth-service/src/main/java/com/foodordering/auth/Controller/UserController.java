@@ -37,6 +37,11 @@ public class UserController {
         return userService.registerOwner(entity);
     }
 
+    @PostMapping("/register/delivery")
+    public String registerDelivery(@RequestBody @Valid RegisterRequest entity) {
+        return userService.registerDelivery(entity);
+    }
+
     @PostMapping("/login")
     public LoginResponse login(@RequestBody @Valid LoginRequest user) {
         return authService.login(user);

@@ -2,9 +2,12 @@ package com.foodordering.restaurant.services;
 
 import com.foodordering.restaurant.aspect.Interfaces.CheckOwnerAndAdmin;
 import com.foodordering.restaurant.aspect.Interfaces.OnlySpecificOwner;
+import com.foodordering.restaurant.dtos.MenuItemRequest;
 import com.foodordering.restaurant.dtos.UserDTO;
+import com.foodordering.restaurant.models.MenuCategory;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.models.Restaurant;
+import com.foodordering.restaurant.repository.MenuCategoryRepository;
 import com.foodordering.restaurant.repository.MenuItemRepository;
 import com.foodordering.restaurant.repository.RestaurantRepository;
 import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
@@ -32,17 +35,34 @@ public class MenuItemService {
     @Autowired
     private ImageService imageService;
 
+    @Autowired
+    private MenuCategoryRepository categoryRepository;
+
     @OnlySpecificOwner
-    public MenuItem addMenuItem(Long restaurantId, UserDTO owner, MenuItem item) {
+    public MenuItem addMenuItem(Long restaurantId, UserDTO owner, MenuItemRequest request) {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
-        if (menuItemRepository.existsByNameAndRestaurant_Id(item.getName(), restaurantId)) {
+        if (menuItemRepository.existsByNameAndRestaurant_Id(request.getName(), restaurantId)) {
             throw new DuplicateResourceException("Menu item already exists");
         }
 
+
+       MenuCategory category = categoryRepository.findById(request.getCategoryId())
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        MenuItem item = new MenuItem();
+
+        item.setName(request.getName());
+        item.setDescription(request.getDescription());
+        item.setPrice(request.getPrice());
+        item.setDiscount(request.getDiscount());
+        item.setStock(request.getStock());
+
         item.setRestaurant(restaurant);
+        item.setCategory(category);
+
 
         return menuItemRepository.save(item);
     }
