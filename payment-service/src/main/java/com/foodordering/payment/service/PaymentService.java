@@ -4,7 +4,6 @@ import com.foodordering.payment.dto.PaymentRequest;
 import com.foodordering.payment.dto.PaymentResponse;
 import com.foodordering.payment.dto.RefundRequest;
 import com.foodordering.payment.dto.StripePaymentIntentResponse;
-import com.foodordering.payment.config.PaymentSchemaMigration;
 import com.foodordering.payment.entity.Payment;
 import com.foodordering.payment.exception.PaymentNotFoundException;
 import com.foodordering.payment.exception.PaymentProcessingException;
@@ -29,7 +28,6 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final StripeService stripeService;
-    private final PaymentSchemaMigration paymentSchemaMigration;
 
     /**
      * Create a payment using the correct flow for the selected payment method.
@@ -155,7 +153,6 @@ public class PaymentService {
 
     public PaymentResponse getPaymentByPaymentId(String paymentId) {
         log.info("Fetching payment with ID: {}", paymentId);
-        paymentSchemaMigration.sanitizePaymentData();
 
         Payment payment = paymentRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found with ID: " + paymentId));
@@ -181,19 +178,16 @@ public class PaymentService {
 
     public List<PaymentResponse> getPaymentsByOrderId(Long orderId) {
         log.info("Fetching payments for order: {}", orderId);
-        paymentSchemaMigration.sanitizePaymentData();
         return mapPaymentsToResponse(paymentRepository.findByOrderId(orderId));
     }
 
     public List<PaymentResponse> getPaymentsByUserId(Long userId) {
         log.info("Fetching payments for user: {}", userId);
-        paymentSchemaMigration.sanitizePaymentData();
         return mapPaymentsToResponse(paymentRepository.findByUserId(userId));
     }
 
     public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
         log.info("Fetching payments with status: {}", status);
-        paymentSchemaMigration.sanitizePaymentData();
         return mapPaymentsToResponse(paymentRepository.findByStatus(status));
     }
 
@@ -221,8 +215,8 @@ public class PaymentService {
         Payment payment = paymentRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found with ID: " + paymentId));
 
-        if (payment.getStatus() == Payment.PaymentStatus.COMPLETED) {
-            throw new PaymentProcessingException("Cannot cancel completed payment");
+        if (payment.getStatus() != Payment.PaymentStatus.PENDING) {
+            throw new PaymentProcessingException("Only pending payments can be cancelled. Current status: " + payment.getStatus());
         }
 
         try {
@@ -263,8 +257,10 @@ public class PaymentService {
                 newStatus = Payment.PaymentStatus.COMPLETED;
                 break;
             case "payment_intent.payment_failed":
-            case "payment_intent.canceled":
                 newStatus = Payment.PaymentStatus.FAILED;
+                break;
+            case "payment_intent.canceled":
+                newStatus = Payment.PaymentStatus.CANCELLED;
                 break;
             case "payment_intent.processing":
                 newStatus = Payment.PaymentStatus.PENDING;

@@ -3,7 +3,6 @@ package com.foodordering.payment.service;
 import com.foodordering.payment.dto.PaymentRequest;
 import com.foodordering.payment.dto.PaymentResponse;
 import com.foodordering.payment.dto.RefundRequest;
-import com.foodordering.payment.config.PaymentSchemaMigration;
 import com.foodordering.payment.entity.Payment;
 import com.foodordering.payment.exception.PaymentProcessingException;
 import com.foodordering.payment.mapper.PaymentMapper;
@@ -34,14 +33,11 @@ class PaymentServiceTest {
     @Mock
     private StripeService stripeService;
 
-    @Mock
-    private PaymentSchemaMigration paymentSchemaMigration;
-
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
-        paymentService = new PaymentService(paymentRepository, new PaymentMapper(), stripeService, paymentSchemaMigration);
+        paymentService = new PaymentService(paymentRepository, new PaymentMapper(), stripeService);
     }
 
     @Test
@@ -80,5 +76,19 @@ class PaymentServiceTest {
         RefundRequest request = new RefundRequest("PAY-1", 101.0, "Too much");
 
         assertThrows(PaymentProcessingException.class, () -> paymentService.processRefund(request));
+    }
+
+    @Test
+    void cancelPaymentRejectsNonPendingPayment() {
+        Payment payment = new Payment();
+        payment.setPaymentId("PAY-2");
+        payment.setAmount(BigDecimal.valueOf(100));
+        payment.setStatus(Payment.PaymentStatus.FAILED);
+        payment.setPaymentMethod(Payment.PaymentMethod.CASH_ON_DELIVERY);
+
+        when(paymentRepository.findByPaymentId("PAY-2")).thenReturn(Optional.of(payment));
+
+        assertThrows(PaymentProcessingException.class, () -> paymentService.cancelPayment("PAY-2"));
+        verify(paymentRepository, never()).save(any(Payment.class));
     }
 }
