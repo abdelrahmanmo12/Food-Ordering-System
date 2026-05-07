@@ -80,6 +80,21 @@ spring:
             filters:
               - AuthenticationFilter
 
+          # ORDER-SERVICE
+          - id: order-service-orders
+            uri: lb://ORDER-SERVICE
+            predicates:
+              - Path=/api/orders/**
+            filters:
+              - AuthenticationFilter
+              
+          - id: order-service-cart
+            uri: lb://ORDER-SERVICE
+            predicates:
+              - Path=/api/cart/**
+            filters:
+              - AuthenticationFilter
+
 eureka:
   instance:
     prefer-ip-address: true 

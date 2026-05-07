@@ -8,7 +8,7 @@ import java.util.List;
 public class OrderRequest {
 
     private Long restaurantId;
-    private String customerId;
+    private Long customerId;
     private String address;
     private String paymentMethod;
     private List<OrderItemRequest> items;

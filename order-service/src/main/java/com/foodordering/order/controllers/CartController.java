@@ -15,31 +15,33 @@ public class CartController {
     private final OrderServiceImpl orderService;
 
     @PostMapping
-    public ResponseEntity<CartResponse> addToCart(@RequestBody CartRequest request) {
+    public ResponseEntity<CartResponse> addToCart(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody CartRequest request) {
         return ResponseEntity.ok(
                 orderService.addToCart(
-                        request.getCustomerId(),            // ✅
+                        userId,            // Securely uses the authenticated ID
                         request.getItems(),
                         request.getRestaurantName()
                 )
         );
     }
 
-    @GetMapping("/{customerId}")                                            // ✅
-    public ResponseEntity<CartResponse> getCart(@PathVariable String customerId) {
-        return ResponseEntity.ok(orderService.getCart(customerId));
+    @GetMapping
+    public ResponseEntity<CartResponse> getCart(@RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(orderService.getCart(userId));
     }
 
-    @DeleteMapping("/{customerId}")                                         // ✅
-    public ResponseEntity<String> clearCart(@PathVariable String customerId) {
-        orderService.clearCart(customerId);
+    @DeleteMapping
+    public ResponseEntity<String> clearCart(@RequestHeader("X-User-Id") Long userId) {
+        orderService.clearCart(userId);
         return ResponseEntity.ok("Cart cleared successfully");
     }
 
-    @DeleteMapping("/{customerId}/items/{itemName}")                        // ✅
+    @DeleteMapping("/items/{itemName}")
     public ResponseEntity<CartResponse> removeFromCart(
-            @PathVariable String customerId,
+            @RequestHeader("X-User-Id") Long userId,
             @PathVariable String itemName) {
-        return ResponseEntity.ok(orderService.removeFromCart(customerId, itemName));
+        return ResponseEntity.ok(orderService.removeFromCart(userId, itemName));
     }
 }

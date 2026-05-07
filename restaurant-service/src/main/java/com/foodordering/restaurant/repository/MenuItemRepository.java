@@ -16,4 +16,6 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     boolean existsByNameAndRestaurant_Id(String name, Long restaurantId);
 
     MenuItem findByRestaurantIdAndNameIgnoreCase(Long restaurantId, String name);
+    MenuItem findByRestaurantIdAndId(Long restaurantId, Long itemId);
+
 }

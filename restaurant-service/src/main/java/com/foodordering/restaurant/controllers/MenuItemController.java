@@ -76,8 +76,16 @@ public class MenuItemController {
     }
     @GetMapping("/item")
     public MenuItem getItem(
-            @RequestParam Long restaurantId,
-            @RequestParam String itemName
+            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam("itemId") Long itemId
+    ) {
+        return menuItemService.getItemByRestaurantAndId(restaurantId, itemId);
+    }
+
+    @GetMapping("/item/by-name")
+    public MenuItem getItemByName(
+            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam("itemName") String itemName
     ) {
         return menuItemService.getItemByRestaurantAndName(restaurantId, itemName);
     }

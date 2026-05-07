@@ -2,6 +2,7 @@ package com.foodordering.order.services;
 
 import com.foodordering.order.abstracts.OrderService;
 import com.foodordering.order.clients.RestaurantClient;
+import com.foodordering.order.clients.UserClient;
 import com.foodordering.order.DTOs.*;
 import com.foodordering.order.entity.*;
 import com.foodordering.order.exceptions.*;
@@ -20,9 +21,12 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepo;
     private final CartRepository cartRepo;
     private final RestaurantClient restaurantClient;
+    private final UserClient userClient;
 
     @Override
     public OrderCreationResponse createOrder(OrderRequest request) {
+        UserProfileResponse userProfile = userClient.getUserById(request.getCustomerId());
+
         double total = 0;
         List<OrderItem> items = new ArrayList<>();
 
@@ -41,13 +45,15 @@ public class OrderServiceImpl implements OrderService {
                     .build());
         }
 
-        String orderNumber = "ORD-" + (1000 + (int)(Math.random() * 9000));
+        String orderNumber = "ORD-" + (1000 + (int) (Math.random() * 9000));
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerId(request.getCustomerId())    // ✅
-                .address(request.getAddress())
-                .restaurantId(String.valueOf(request.getRestaurantId()))
+                .customerId(request.getCustomerId())
+                .phone(userProfile.getPhoneNumber())
+                .customerName(userProfile.getFullName())
+                .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
+                .restaurantId(request.getRestaurantId())
                 .items(items)
                 .totalPrice(total)
                 .status(OrderStatus.CREATED)
@@ -56,30 +62,32 @@ public class OrderServiceImpl implements OrderService {
 
         orderRepo.save(order);
         return new OrderCreationResponse(order.getId(), "Order placed successfully");
-        // ✅ returns the real MongoDB id instead of a random Long
     }
 
     @Override
-    public OrderResponse checkout(String customerId, CheckoutRequest request) {
+    public OrderResponse checkout(Long customerId, CheckoutRequest request) {
 
-        Cart cart = cartRepo.findByCustomerId(customerId)   // ✅
-                .orElseThrow(() -> new CartNotFoundException(customerId));
+        UserProfileResponse userProfile = userClient.getUserById(customerId);
+
+        Cart cart = cartRepo.findByCustomerId(customerId) // ✅
+                .orElseThrow(() -> new CartNotFoundException(String.valueOf(customerId)));
 
         if (cart.getItems() == null || cart.getItems().isEmpty())
-            throw new CartNotFoundException(customerId);
+            throw new CartNotFoundException(String.valueOf(customerId));
 
         double total = cart.getItems()
                 .stream()
                 .mapToDouble(item -> item.getPrice() * item.getQuantity())
                 .sum();
 
-        String orderNumber = "ORD-" + (1000 + (int)(Math.random() * 9000));
+        String orderNumber = "ORD-" + (1000 + (int) (Math.random() * 9000));
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerId(customerId)                     // ✅
-                .customerName(request.getCustomerName())
-                .address(request.getAddress())
+                .customerId(customerId) // ✅
+                .phone(userProfile.getPhoneNumber())
+                .customerName(userProfile.getFullName())
+                .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
                 .restaurantName(cart.getRestaurantName())
                 .items(cart.getItems())
                 .totalPrice(total)
@@ -88,14 +96,14 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderRepo.save(order);
-        cartRepo.deleteByCustomerId(customerId);            // ✅ clears cart after checkout
+        cartRepo.deleteByCustomerId(customerId); // ✅ clears cart after checkout
 
         return map(order);
     }
 
     @Override
-    public List<OrderResponse> getOrders(String customerId) {
-        return orderRepo.findByCustomerId(customerId)       // ✅
+    public List<OrderResponse> getOrders(Long customerId) {
+        return orderRepo.findByCustomerId(customerId) // ✅
                 .stream()
                 .map(this::map)
                 .toList();
@@ -116,23 +124,27 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public CartResponse addToCart(String customerId, List<com.foodordering.order.DTOs.CartItemRequest> items, String restaurantName) {
+    public CartResponse addToCart(Long customerId, List<com.foodordering.order.DTOs.CartItemRequest> items,
+            String restaurantName) {
+
         var restaurant = restaurantClient.getByName(restaurantName);
         if (restaurant == null)
             throw new RestaurantNotFoundException(restaurantName);
 
-        Cart cart = cartRepo.findByCustomerId(customerId)   // ✅
+        Cart cart = cartRepo.findByCustomerId(customerId) // ✅
                 .orElse(Cart.builder()
-                        .customerId(customerId)             // ✅
+                        .customerId(customerId) // ✅
                         .restaurantName(restaurantName)
                         .items(new ArrayList<>())
                         .build());
 
         for (var reqItem : items) {
+            System.out.println("Restaurant ID = " + restaurant.getId());
+            System.out.println("Restaurant Name = " + restaurant.getName());
+            System.out.println("Searching item = " + reqItem.getItemName());
             var menu = restaurantClient.getItemByName(
                     Long.valueOf(restaurant.getId()),
-                    reqItem.getItemName()
-            );
+                    reqItem.getItemName());
             if (menu == null)
                 throw new RestaurantNotFoundException(reqItem.getItemName());
 
@@ -156,25 +168,25 @@ public class OrderServiceImpl implements OrderService {
         return mapCart(cart);
     }
 
-    @Override
-    public CartResponse addToCart(String customerId, String itemName, int quantity, String restaurantName) {
-        CartItemRequest item = new CartItemRequest();
-        item.setItemName(itemName);
-        item.setQuantity(quantity);
-        return addToCart(customerId, List.of(item), restaurantName);
-    }
+    // @Override
+    // public CartResponse addToCart(Long customerId, String itemName, int quantity, String restaurantName) {
+    //     CartItemRequest item = new CartItemRequest();
+    //     item.setItemName(itemName);
+    //     item.setQuantity(quantity);
+    //     return addToCart(customerId, List.of(item), restaurantName);
+    // }
+
+    // @Override
+    // public CartResponse addToCart(Long customerId, String itemName, int quantity, Long restaurantId) {
+    //     throw new UnsupportedOperationException("Use addToCart with restaurantName instead");
+    // }
 
     @Override
-    public CartResponse addToCart(String customerId, String itemName, int quantity, Long restaurantId) {
-        throw new UnsupportedOperationException("Use addToCart with restaurantName instead");
-    }
-
-    @Override
-    public CartResponse getCart(String customerId) {
-        return cartRepo.findByCustomerId(customerId)        // ✅
+    public CartResponse getCart(Long customerId) {
+        return cartRepo.findByCustomerId(customerId) // ✅
                 .map(this::mapCart)
                 .orElse(CartResponse.builder()
-                        .customerId(customerId)             // ✅
+                        .customerId(customerId) // ✅
                         .restaurantName(null)
                         .items(new ArrayList<>())
                         .totalPrice(0.0)
@@ -183,14 +195,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void clearCart(String customerId) {
-        cartRepo.deleteByCustomerId(customerId);            // ✅
+    public void clearCart(Long customerId) {
+        cartRepo.deleteByCustomerId(customerId); // ✅
     }
 
     @Override
-    public CartResponse removeFromCart(String customerId, String itemName) {
-        Cart cart = cartRepo.findByCustomerId(customerId)   // ✅
-                .orElseThrow(() -> new CartNotFoundException(customerId));
+    public CartResponse removeFromCart(Long customerId, String itemName) {
+        Cart cart = cartRepo.findByCustomerId(customerId) // ✅
+                .orElseThrow(() -> new CartNotFoundException(String.valueOf(customerId)));
 
         boolean removed = cart.getItems()
                 .removeIf(item -> item.getName().equalsIgnoreCase(itemName));
@@ -230,8 +242,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<RestaurantOrderResponse> getOrdersByRestaurant(String restaurantName) {
-        return orderRepo.findByRestaurantName(restaurantName)
+    public List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId) {
+        return orderRepo.findByRestaurantId(restaurantId)
                 .stream()
                 .map(this::mapToRestaurantOrder)
                 .toList();
@@ -273,7 +285,7 @@ public class OrderServiceImpl implements OrderService {
                 .sum();
 
         return CartResponse.builder()
-                .customerId(cart.getCustomerId())           // ✅
+                .customerId(cart.getCustomerId()) // ✅
                 .restaurantName(cart.getRestaurantName())
                 .items(cart.getItems())
                 .totalPrice(total)
@@ -285,7 +297,7 @@ public class OrderServiceImpl implements OrderService {
         return RestaurantOrderResponse.builder()
                 .orderNumber(order.getOrderNumber())
                 .customerName(order.getCustomerName())
-                .customerId(order.getCustomerId())          // ✅
+                .customerId(String.valueOf(order.getCustomerId())) // ✅
                 .address(order.getAddress())
                 .items(order.getItems())
                 .totalPrice(order.getTotalPrice())
@@ -297,12 +309,18 @@ public class OrderServiceImpl implements OrderService {
 
     private String getStatusMessage(OrderStatus status) {
         switch (status) {
-            case CREATED: return "Order received! Waiting for restaurant to confirm.";
-            case PREPARING: return "Your order is being prepared by the restaurant.";
-            case OUT_FOR_DELIVERY: return "Your order is on the way! Driver is heading to you.";
-            case DELIVERED: return "Order delivered! Enjoy your meal.";
-            case CANCELLED: return "Your order has been cancelled.";
-            default: return "Unknown status.";
+            case CREATED:
+                return "Order received! Waiting for restaurant to confirm.";
+            case PREPARING:
+                return "Your order is being prepared by the restaurant.";
+            case OUT_FOR_DELIVERY:
+                return "Your order is on the way! Driver is heading to you.";
+            case DELIVERED:
+                return "Order delivered! Enjoy your meal.";
+            case CANCELLED:
+                return "Your order has been cancelled.";
+            default:
+                return "Unknown status.";
         }
     }
 }

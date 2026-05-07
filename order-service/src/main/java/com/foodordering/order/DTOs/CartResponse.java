@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 @Builder
 public class CartResponse {
-    private String customerId;
+    private Long customerId;
     private String restaurantName;  // ← make sure this exists
     private List<OrderItem> items;
     private double totalPrice;

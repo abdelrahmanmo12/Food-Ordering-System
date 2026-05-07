@@ -100,4 +100,11 @@ public class UserController {
         UserDTO user = new UserDTO(userId, role, status);
         return ResponseEntity.ok(userService.getFavoriteRestaurants(Long.valueOf(userId), user));
     }
+
+    // This endpoint is for interservice communication from Order-Service
+    @GetMapping("/{id}")
+    public ResponseEntity<UserProfileResponse> getUserById(@PathVariable Long id) {
+        UserProfileResponse userProfile = userService.getUserProfileById(id);
+        return ResponseEntity.ok(userProfile);
+    }
 }

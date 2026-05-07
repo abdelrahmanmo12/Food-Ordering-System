@@ -6,7 +6,7 @@ import java.util.List;
 
 @Data
 public class CartRequest {
-    private String customerId;
+    private Long customerId;
     private String restaurantName;
     private List<CartItemRequest> items;
 }

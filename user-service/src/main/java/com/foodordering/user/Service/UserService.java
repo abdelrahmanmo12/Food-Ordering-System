@@ -48,6 +48,18 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Profile with ID " + userId + " not found"));
     }
 
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfileById(Long id) {
+        return repository.findById(id)
+                .map(profile -> new UserProfileResponse(
+                        profile.getId(),
+                        profile.getFullName(),
+                        profile.getType(),
+                        profile.getAddress(),
+                        profile.getPhoneNumber()))
+                .orElseThrow(() -> new ResourceNotFoundException("Profile with ID " + id + " not found"));
+    }
+
     private Long parseId(String id) {
         try {
             return Long.valueOf(id);

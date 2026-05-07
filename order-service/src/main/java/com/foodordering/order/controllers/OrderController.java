@@ -4,6 +4,9 @@ import com.foodordering.order.DTOs.*;
 import com.foodordering.order.entity.OrderStatus;
 import com.foodordering.order.services.OrderServiceImpl;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,15 +23,20 @@ public class OrderController {
 
     // Customer places a direct order
     @PostMapping
-    public ResponseEntity<OrderCreationResponse> createOrder(@RequestBody OrderRequest request) {
+    public ResponseEntity<OrderCreationResponse> createOrder(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody OrderRequest request) {
+
+        // Enforce the logged-in user's ID
+        request.setCustomerId(userId);
         return ResponseEntity.ok(service.createOrder(request));
     }
 
     // Customer views their order history
-    @GetMapping("/me/{customerId}")                                          // ✅
+    @GetMapping("/me")
     public ResponseEntity<List<OrderResponse>> getMyOrders(
-            @PathVariable String customerId) {
-        return ResponseEntity.ok(service.getOrders(customerId));
+            @RequestHeader("X-User-Id") Long userId) {
+        return ResponseEntity.ok(service.getOrders(userId));
     }
 
     // Customer tracks a specific order by order number
@@ -39,49 +47,66 @@ public class OrderController {
     }
 
     // Customer cancels their order
-    @PatchMapping("/{orderNumber}/cancel")                                  // ✅ PATCH is more semantic
+    @PatchMapping("/{orderNumber}/cancel") // ✅ PATCH is more semantic
     public ResponseEntity<String> cancel(@PathVariable String orderNumber) {
         service.cancelOrder(orderNumber);
         return ResponseEntity.ok("Order cancelled successfully");
     }
 
     // Customer checks out from cart
-    @PostMapping("/checkout/{customerId}")                                   // ✅
+    @PostMapping("/checkout")
     public ResponseEntity<OrderResponse> checkout(
-            @PathVariable String customerId,
+            @RequestHeader("X-User-Id") Long userId,
             @RequestBody CheckoutRequest request) {
-        return ResponseEntity.ok(service.checkout(customerId, request));
+        return ResponseEntity.ok(service.checkout(userId, request));
     }
 
     // ===== Admin =====
 
     @GetMapping("/admin/all")
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+    public ResponseEntity<List<OrderResponse>> getAllOrders(
+            @RequestHeader(value = "X-User-Role") String role) {
+
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403).build(); // Forbidden
+        }
         return ResponseEntity.ok(service.getAllOrders());
     }
 
-    @PatchMapping("/admin/{orderNumber}/status")                            // ✅ PATCH not PUT
+    @PatchMapping("/admin/{orderNumber}/status") // ✅ PATCH not PUT
     public ResponseEntity<OrderResponse> updateStatus(
+            @RequestHeader(value = "X-User-Role") String role,
             @PathVariable String orderNumber,
             @RequestParam OrderStatus status) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403).build(); // Forbidden
+        }
         return ResponseEntity.ok(service.updateOrderStatus(orderNumber, status));
     }
 
     @DeleteMapping("/admin/{orderNumber}")
-    public ResponseEntity<String> deleteOrder(@PathVariable String orderNumber) {
+    public ResponseEntity<String> deleteOrder(@RequestHeader(value = "X-User-Role") String role,
+            @PathVariable String orderNumber) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403).build(); // Forbidden
+        }
         service.deleteOrder(orderNumber);
         return ResponseEntity.ok("Order deleted successfully");
     }
 
     // ===== Restaurant =====
 
-    @GetMapping("/restaurant/{restaurantName}")
+    @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<List<RestaurantOrderResponse>> getOrdersByRestaurant(
-            @PathVariable String restaurantName) {
-        return ResponseEntity.ok(service.getOrdersByRestaurant(restaurantName));
+            @RequestHeader(value = "X-User-Role") String role,
+            @PathVariable Long restaurantId) {
+        if (!"OWNER".equalsIgnoreCase(role)) {
+            return ResponseEntity.status(403).build(); // Forbidden
+        }
+        return ResponseEntity.ok(service.getOrdersByRestaurant(restaurantId));
     }
 
-    @PatchMapping("/restaurant/{orderNumber}/status")                       // ✅ PATCH not PUT
+    @PatchMapping("/restaurant/{orderNumber}/status") // ✅ PATCH not PUT
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable String orderNumber,
             @RequestParam OrderStatus status) {

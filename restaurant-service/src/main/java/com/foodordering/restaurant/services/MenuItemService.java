@@ -121,6 +121,11 @@ public class MenuItemService {
     public MenuItem getItemByRestaurantAndName(Long restaurantId, String itemName) {
         return menuItemRepository.findByRestaurantIdAndNameIgnoreCase(restaurantId, itemName);
     }
+
+    public MenuItem getItemByRestaurantAndId(Long restaurantId, Long itemId) {
+        return menuItemRepository.findByRestaurantIdAndId(restaurantId, itemId);
+    }
+
     public List<MenuItem> addBulkMenuItems(Long restaurantId, List<MenuItem> items) {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)

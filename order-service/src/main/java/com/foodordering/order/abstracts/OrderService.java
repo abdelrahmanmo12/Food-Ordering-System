@@ -8,22 +8,22 @@ import java.util.List;
 public interface OrderService {
 
     OrderCreationResponse createOrder(OrderRequest request);
-    List<OrderResponse> getOrders(String customerId);           // ✅
+    List<OrderResponse> getOrders(Long customerId);           // ✅
     void cancelOrder(String orderNumber);
 
-    CartResponse addToCart(String customerId, String itemName, int quantity, String restaurantName);
-    CartResponse addToCart(String customerId, String itemName, int quantity, Long restaurantId);
-    CartResponse addToCart(String customerId, List<CartItemRequest> items, String restaurantName);
-    CartResponse getCart(String customerId);                    // ✅
-    void clearCart(String customerId);                          // ✅
-    CartResponse removeFromCart(String customerId, String itemName); // ✅
+    // CartResponse addToCart(Long customerId, String itemName, int quantity, String restaurantName);
+    // CartResponse addToCart(Long customerId, String itemName, int quantity, Long restaurantId);
+    CartResponse addToCart(Long customerId, List<CartItemRequest> items, String restaurantName);
+    CartResponse getCart(Long customerId);                    // ✅
+    void clearCart(Long customerId);                          // ✅
+    CartResponse removeFromCart(Long customerId, String itemName); // ✅
 
-    OrderResponse checkout(String customerId, CheckoutRequest request); // ✅
+    OrderResponse checkout(Long customerId, CheckoutRequest request); // ✅
 
     List<OrderResponse> getAllOrders();
     OrderResponse updateOrderStatus(String orderNumber, OrderStatus status);
     void deleteOrder(String orderNumber);
 
-    List<RestaurantOrderResponse> getOrdersByRestaurant(String restaurantName);
+    List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId);
     OrderTrackingResponse trackOrder(String orderNumber);
 }
