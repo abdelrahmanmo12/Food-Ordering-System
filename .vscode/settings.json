@@ -1,9 +1,0 @@
-{
-<<<<<<< HEAD
-    "java.configuration.updateBuildConfiguration": "automatic",
-    "java.compile.nullAnalysis.mode": "automatic"
-=======
-    "java.compile.nullAnalysis.mode": "disabled",
-    "java.configuration.updateBuildConfiguration": "interactive"
->>>>>>> user-service
-}
