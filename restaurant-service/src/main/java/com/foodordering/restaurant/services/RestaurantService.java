@@ -17,7 +17,6 @@ import com.foodordering.restaurant.aspect.Interfaces.OnlyOwner;
 import com.foodordering.restaurant.aspect.Interfaces.OnlySpecificOwner;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class RestaurantService {
@@ -181,12 +180,12 @@ public class RestaurantService {
 
     public Restaurant findByName(String name) {
         return restaurantRepository.findByName(name)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
 
     public Restaurant getRestaurantByName(String name) {
         return restaurantRepository.findByName(name)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
     public List<Restaurant> searchByName(String name) {
         return restaurantRepository.findByNameContainingIgnoreCase(name);

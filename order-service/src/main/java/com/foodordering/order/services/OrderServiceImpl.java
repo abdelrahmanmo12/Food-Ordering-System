@@ -116,7 +116,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public CartResponse addToCart(String customerId, List<CartItemRequest> items, String restaurantName) {
+    public CartResponse addToCart(String customerId, List<com.foodordering.order.DTOs.CartItemRequest> items, String restaurantName) {
         var restaurant = restaurantClient.getByName(restaurantName);
         if (restaurant == null)
             throw new RestaurantNotFoundException(restaurantName);

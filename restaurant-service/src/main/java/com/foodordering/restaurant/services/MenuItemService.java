@@ -138,10 +138,9 @@ public class MenuItemService {
             throw new RuntimeException("No menu items found for this restaurant");
         }
 
-        // Group items by category automatically
         Map<String, List<MenuItem>> menu = new LinkedHashMap<>();
         for (MenuItem item : items) {
-            menu.computeIfAbsent(item.getCategory(), k -> new ArrayList<>()).add(item);
+            menu.computeIfAbsent(item.getCategory().getName(), k -> new ArrayList<>()).add(item);
         }
 
         return menu;
