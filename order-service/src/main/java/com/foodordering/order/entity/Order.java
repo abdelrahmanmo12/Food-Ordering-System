@@ -9,7 +9,11 @@ public class Order {
     @Id
     private String id;
 
-    private String userId;
+    private String customerName;
+    private String customerId;
+    private String address;
+    private String orderNumber;
+
     private String restaurantId;
     private double totalPrice;
 
@@ -21,12 +25,12 @@ public class Order {
         this.id = id;
     }
 
-    public String getUserId() {
-        return userId;
+    public String getCustomerId() {
+        return customerId;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
     }
 
     public String getRestaurantId() {

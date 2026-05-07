@@ -8,6 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 public class OrderItem {
     private String name;
-    private int quantity;
     private double price;
+    private int quantity;
 }

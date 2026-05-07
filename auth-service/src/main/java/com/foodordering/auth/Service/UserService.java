@@ -4,13 +4,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Config.UserServiceClient;
+import com.foodordering.auth.Entity.User;
 import com.foodordering.auth.Enum.AccountStatus;
 import com.foodordering.auth.Enum.Role;
 import com.foodordering.auth.Jwt.JwtService;
 import com.foodordering.auth.Repo.RefreshTokenRepo;
 import com.foodordering.auth.Repo.UserRepo;
+import com.foodordering.auth.dto.Requests.ChangePasswordRequest;
 import com.foodordering.auth.dto.Requests.RegisterRequest;
+import com.foodordering.auth.dto.Requests.UserProfileRequest;
+import com.foodordering.auth.exception.InvalidPasswordException;
 import com.foodordering.auth.exception.UserNotFoundException;
 import com.foodordering.auth.exception.UsernameAlreadyExistsException;
 
@@ -34,18 +38,29 @@ public class UserService {
     @Autowired
     RefreshTokenRepo refreshTokenRepo;
 
+    @Autowired
+    UserServiceClient userServiceClient;
+    
     @Transactional
     public String registerCustomer(@Valid RegisterRequest user) {
 
         if (userRepo.findByEmail(user.getEmail()).isPresent()) {
             throw new UsernameAlreadyExistsException("Email already taken");
         }
-        user newUser = new user();
+        User newUser = new User();
         newUser.setEmail(user.getEmail());
+        newUser.setFullName(user.getFullName());
         newUser.setRole(Role.USER);
         newUser.setStatus(AccountStatus.ACTIVE);
         newUser.setPassword(encoder.encode(user.getPassword())); 
-        userRepo.save(newUser);
+        newUser = userRepo.save(newUser);
+
+        UserProfileRequest profileClient = new UserProfileRequest();
+        profileClient.setId(newUser.getUser_id());
+        profileClient.setFullName(newUser.getFullName());
+        profileClient.setType("USER");
+
+        userServiceClient.createProfile(profileClient);
 
         return "registered";
     }
@@ -56,19 +71,41 @@ public class UserService {
         if (userRepo.findByEmail(user.getEmail()).isPresent()) {
             throw new UsernameAlreadyExistsException("Email already taken");
         }
-        user newUser = new user();
+        User newUser = new User();
         newUser.setEmail(user.getEmail());
+        newUser.setFullName(user.getFullName());
         newUser.setRole(Role.OWNER); 
         newUser.setStatus(AccountStatus.PENDING);
         newUser.setPassword(encoder.encode(user.getPassword())); 
-        userRepo.save(newUser);
+        newUser = userRepo.save(newUser);
+
+        UserProfileRequest profileClient = new UserProfileRequest();
+        profileClient.setId(newUser.getUser_id());
+        profileClient.setFullName(newUser.getFullName());
+        profileClient.setType("OWNER");
+
+        userServiceClient.createProfile(profileClient);
 
         return "registered";
     }
     
 
+        public String changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!encoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new InvalidPasswordException("The old password you entered is incorrect.");
+        }
+
+        user.setPassword(encoder.encode(request.getNewPassword()));
+        userRepo.save(user);
+
+        return "Password changed successfully";
+    }
+
     public String PromotionToOwner(String email){
-        user u = userRepo.findByEmail(email).orElseThrow(()-> new UserNotFoundException("user not found"));
+        User u = userRepo.findByEmail(email).orElseThrow(()-> new UserNotFoundException("user not found"));
         u.setRole(Role.OWNER);
         userRepo.save(u);
         return "User promoted to OWNER";

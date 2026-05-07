@@ -6,7 +6,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Entity.User;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -36,9 +36,9 @@ public class JwtService {
         }
     }
 
-    public String generateToken(user user) {
+    public String generateToken(User user) {
 
-        long EXPIRATION = 15 * 60 * 1000;
+        long EXPIRATION = 40 * 60 * 1000;
         try {
             return Jwts.builder()
                     .setSubject(user.getEmail())

@@ -23,7 +23,6 @@ public class RestaurantExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleGeneralException(Exception ex) {
 
-        ex.printStackTrace(); // 🔥VERY IMPORTANT for debugging
 
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problem.setTitle("Server Error");

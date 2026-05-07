@@ -1,11 +1,11 @@
 package com.foodordering.auth.dto.Response;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class PendingAccountResponse {
     private Long accountId;
     private String email;
-    private LocalDateTime requestedAt;
+    private Instant requestedAt;
 
     public Long getAccountId() {
         return accountId;
@@ -23,16 +23,16 @@ public class PendingAccountResponse {
         this.email = email;
     }
 
-    public LocalDateTime getRequestedAt() {
+    public Instant getRequestedAt() {
         return requestedAt;
     }
 
-    public void setRequestedAt(LocalDateTime requestedAt) {
+    public void setRequestedAt(Instant requestedAt) {
         this.requestedAt = requestedAt;
     }
 
     // Constructors
-    public PendingAccountResponse(Long accountId, String email, LocalDateTime requestedAt) {
+    public PendingAccountResponse(Long accountId, String email, Instant requestedAt) {
         this.accountId = accountId;
         this.email = email;
         this.requestedAt = requestedAt;

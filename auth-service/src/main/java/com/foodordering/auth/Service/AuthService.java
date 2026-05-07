@@ -1,7 +1,7 @@
 package com.foodordering.auth.Service;
 
 import com.foodordering.auth.Entity.RefreshToken;
-import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Entity.User;
 import com.foodordering.auth.Enum.AccountStatus;
 import com.foodordering.auth.Enum.Role;
 import com.foodordering.auth.Jwt.JwtService;
@@ -42,7 +42,7 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        user dbUser = userRepo.findByEmail(request.getEmail())
+        User dbUser = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (dbUser.getStatus() == AccountStatus.BANNED) {
@@ -77,7 +77,7 @@ public class AuthService {
 
     @Transactional
     public void logout(String userId) {
-        user dbUser = userRepo.findById(Long.parseLong(userId))
+        User dbUser = userRepo.findById(Long.parseLong(userId))
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         refreshTokenService.deleteByEmail(dbUser.getEmail());
     }
@@ -86,7 +86,7 @@ public class AuthService {
     public RefreshTokenResponse refreshToken(RefreshRequest request) {
         RefreshToken rt = refreshTokenService.validate(request.getRefreshToken());
 
-        user user = userRepo.findByEmail(rt.getEmail())
+        User user = userRepo.findByEmail(rt.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
 
         String newAccessToken = jwtService.generateToken(user);

@@ -5,7 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.List;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import com.foodordering.restaurant.enums.AdminStatus;
 
@@ -22,40 +26,30 @@ public class Restaurant {
     private String name;
     private String location;
     private String phone;
-    private String description;    
+    private String description;
     private Long ownerId;
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private Instant createdAt;
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private Instant updatedAt;
 
     @Enumerated(EnumType.STRING)
     private AdminStatus status = AdminStatus.PENDING;
-    
+
     private boolean isOpened = false;
-    
+
+    String imageUrl;
+
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
     private List<MenuItem> menuItems;
 
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
+    private List<MenuCategory> categories;
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public List<MenuItem> getMenuItems() {
-        return menuItems;
-    }
+    @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL)
+    private List<Offer> offers;
 
 }

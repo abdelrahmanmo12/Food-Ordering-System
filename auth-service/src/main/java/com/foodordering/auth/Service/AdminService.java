@@ -6,11 +6,12 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Entity.User;
 import com.foodordering.auth.Enum.AccountStatus;
-import com.foodordering.auth.Enum.Role;
 import com.foodordering.auth.Repo.UserRepo;
 import com.foodordering.auth.dto.Response.PendingAccountResponse;
+import com.foodordering.auth.exception.InvalidStatusException;
+import com.foodordering.auth.exception.UserNotFoundException;
 
 import jakarta.transaction.Transactional;
 
@@ -32,22 +33,13 @@ public class AdminService {
 
     @Transactional
     public void updateStatus(Long id, String statusRequest) {
-        user account = userRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account ID not found"));
+        User account = userRepo.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Account ID not found"));
 
-        AccountStatus newStatus = AccountStatus.valueOf(statusRequest.toUpperCase());
-
-        if (newStatus == AccountStatus.ACTIVE) { 
-            // account.setRole(Role.OWNER);
-            account.setStatus(AccountStatus.ACTIVE);
-        } else if (newStatus == AccountStatus.BANNED) {
-            
-            account.setStatus(AccountStatus.BANNED);
-
-        }else if (newStatus == AccountStatus.REJECTED) {
-            account.setStatus(AccountStatus.REJECTED);
-        }else if(newStatus == AccountStatus.PENDING){
-            account.setStatus(AccountStatus.PENDING);
+        try {
+            account.setStatus(AccountStatus.valueOf(statusRequest.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidStatusException("Invalid status: " + statusRequest);
         }
 
         userRepo.save(account);

@@ -1,9 +1,10 @@
 package com.foodordering.order.DTOs;
 
-import lombok.*;
+import lombok.Data;
 
 @Data
 public class OrderItemRequest {
-    private String itemName;
+
+    private Long itemId;
     private int quantity;
 }

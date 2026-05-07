@@ -6,14 +6,14 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.foodordering.auth.Entity.user;
+import com.foodordering.auth.Entity.User;
 import com.foodordering.auth.Enum.AccountStatus;
 
 
 
 @Repository
-public interface UserRepo extends JpaRepository<user, Long> {
-        Optional<user> findByEmail(String email);
+public interface UserRepo extends JpaRepository<User, Long> {
+        Optional<User> findByEmail(String email);
         
-         List<user> findByStatus(AccountStatus status);
+         List<User> findByStatus(AccountStatus status);
 }

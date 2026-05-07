@@ -1,5 +1,6 @@
 package com.foodordering.order.DTOs;
 
+import com.foodordering.order.entity.OrderItem;
 import com.foodordering.order.entity.OrderStatus;
 import lombok.*;
 
@@ -13,5 +14,6 @@ public class OrderResponse {
     private String restaurantName;
     private double totalPrice;
     private OrderStatus status;
-    private List<OrderItemRequest> items;
+    private List<OrderItem> items;
+    private String orderNumber;  // ← add this field// ← keep only this one, remove the other
 }

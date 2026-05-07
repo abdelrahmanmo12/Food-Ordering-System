@@ -1,64 +1,51 @@
 package com.foodordering.user.Exception;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.foodordering.user.Dto.ErrorResponse;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
-    @ExceptionHandler(RequestNotFound.class)
-    public ResponseEntity<?> handleRequstNotFound(RequestNotFound ex){
+
+    private Map<String, Object> buildErrorResponse(HttpStatus status, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", status.value());
+        response.put("error", status.getReasonPhrase());
+        response.put("message", message);
+        return response;
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse(ex.getMessage(), "404"));
+                .body(buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage()));
     }
 
+    @ExceptionHandler(UnauthorizedActionException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorizedActionException(UnauthorizedActionException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage()));
+    }
 
-    @ExceptionHandler(RequestAlreadyPending.class)
-    public ResponseEntity<?> handleRequstAlreadyPending(RequestAlreadyPending ex){
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-            .body(new ErrorResponse(ex.getMessage(), "400" ));
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
-    @ExceptionHandler(RequestAlreadyProcessed.class)
-    public ResponseEntity<?> handleRequestAlreadyProcessed(RequestAlreadyProcessed ex){
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(new ErrorResponse(ex.getMessage(), "409" ));
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
-
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidToken(InvalidTokenException ex) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("status", HttpStatus.UNAUTHORIZED.value());
-        errorResponse.put("error", "Unauthorized");
-        errorResponse.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"));
     }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("status", HttpStatus.FORBIDDEN.value());
-        errorResponse.put("error", "Forbidden");
-        errorResponse.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
-    }
-
-    @ExceptionHandler(ProfileNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleProfileNotFound(ProfileNotFoundException ex) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-        errorResponse.put("error", "Not Found");
-        errorResponse.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-    }
-
-
 }
