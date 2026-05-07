@@ -1,18 +1,20 @@
 package com.foodordering.restaurant.dtos;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class MenuItemDTO {
-    public Long id;
-    public String name;
-    public String description;
-    public double price;
-    public String category;
-    public double discount;
+    private Long id;
+    private String name;
+    private String description;
+    private Double price;
+    private String imageUrl;
+    private boolean available;
+    private Long categoryId;
 
-    public double getPrice() {
-        return 0;
-    }
 
-    public String getName() {
-        return "";
-    }
 }

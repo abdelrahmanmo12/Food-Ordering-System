@@ -14,8 +14,6 @@ public class RouteValidator {
             "/auth/login",
             "/auth/refresh",
             "/eureka"
-            // NOTE: /auth/validate removed — gateway no longer calls it.
-            // It can stay in auth-service for manual/debug use but is not part of the gateway flow.
     );
 
     public Predicate<ServerHttpRequest> isSecured =

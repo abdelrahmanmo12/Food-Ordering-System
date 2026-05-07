@@ -8,7 +8,6 @@ import com.foodordering.restaurant.services.RestaurantService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.SecurityProperties.User;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -21,8 +20,8 @@ public class RestaurantController {
     private RestaurantService restaurantService;
 
     @GetMapping
-    public ResponseEntity<List<RestaurantDTO>> getAll() {
-        List<RestaurantDTO> restaurants = restaurantService.getAllRestaurants()
+    public ResponseEntity<List<RestaurantDTO>> getPublicRestaurants() {
+        List<RestaurantDTO> restaurants = restaurantService.getAllPublicRestaurants()
                 .stream()
                 .map(this::convertToDto)
                 .toList();
@@ -43,7 +42,7 @@ public class RestaurantController {
             return ResponseEntity.status(401).build();
         }
 
-        Restaurant saved = restaurantService.addRestaurant(restaurant, owner);
+        Restaurant saved = restaurantService.addRestaurant(owner, restaurant);
         return new ResponseEntity<>(convertToDto(saved), org.springframework.http.HttpStatus.CREATED);
     }
 
@@ -58,7 +57,7 @@ public class RestaurantController {
             return ResponseEntity.status(401).build();
         }
 
-        Restaurant updated = restaurantService.updateRestaurant(id, restaurant, owner);
+        Restaurant updated = restaurantService.updateRestaurant(id, owner, restaurant);
         return ResponseEntity.ok(convertToDto(updated));
     }
 
@@ -84,7 +83,6 @@ public class RestaurantController {
         }
 
         Restaurant updatedRestaurant = restaurantService.toggleOpeningStatus(id, owner);
-
         return ResponseEntity.ok(convertToDto(updatedRestaurant)); // Status 200
     }
 
@@ -97,9 +95,20 @@ public class RestaurantController {
             return ResponseEntity.status(401).build();
         }
 
-        String url = restaurantService.uploadImage(id, file, owner);
+        String url = restaurantService.uploadImage(id, owner, file);
         return ResponseEntity.ok(url);
 
+    }
+
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<Void> deleteRestaurantImage(@PathVariable Long id) {
+        UserDTO admin = UserContext.getUser();
+        if (admin == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        restaurantService.deleteImage(id, admin);
+        return ResponseEntity.noContent().build();
     }
 
     private RestaurantDTO convertToDto(Restaurant restaurant) {
@@ -114,4 +123,10 @@ public class RestaurantController {
         return dto;
     }
 
+    @GetMapping("/internal/exists/{id}")
+    public ResponseEntity<Boolean> exists(@PathVariable Long id) {
+
+        boolean isFound = restaurantService.existsById(id);
+        return ResponseEntity.ok(isFound);
+    }
 }

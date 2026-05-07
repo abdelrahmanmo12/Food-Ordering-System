@@ -2,6 +2,7 @@ package com.foodordering.auth.Controller;
 
 import com.foodordering.auth.Service.AuthService;
 import com.foodordering.auth.Service.UserService;
+import com.foodordering.auth.dto.Requests.ChangePasswordRequest;
 import com.foodordering.auth.dto.Requests.LoginRequest;
 import com.foodordering.auth.dto.Requests.RefreshRequest;
 import com.foodordering.auth.dto.Requests.RegisterRequest;
@@ -9,10 +10,10 @@ import com.foodordering.auth.dto.Response.LoginResponse;
 import com.foodordering.auth.dto.Response.RefreshTokenResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,14 +54,15 @@ public class UserController {
         return authService.refreshToken(request);
     }
 
-    // Kept for manual testing / debug only — gateway no longer calls this
-    @PostMapping("/validate")
-    public ResponseEntity<?> validateToken(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
-        return authService.validateToken(authHeader);
+    @PutMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Principal principal) {
+
+        String responseMessage = userService.changePassword(principal.getName(), request);
+        return ResponseEntity.ok(Map.of("message", responseMessage));
     }
 
-    // Test endpoint — reads the X-User-* headers injected by the gateway
-    // Hit via: GET :8080/auth/test-gateway  with Authorization: Bearer <token>
     @GetMapping("/test-gateway")
     public ResponseEntity<Map<String, String>> testGatewayHeaders(
             @RequestHeader("X-User-Id") String userId,
@@ -72,10 +74,5 @@ public class UserController {
         response.put("extractedUserRole", role);
         response.put("extractedUserStatus", status);
         return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/make-owner/{email}")
-    public String makeOwner(@PathVariable String email) {
-        return userService.PromotionToOwner(email);
     }
 }

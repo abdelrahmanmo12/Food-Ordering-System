@@ -1,10 +1,14 @@
 package com.foodordering.restaurant.services;
 
+import com.foodordering.restaurant.aspect.Interfaces.CheckOwnerAndAdmin;
+import com.foodordering.restaurant.aspect.Interfaces.OnlySpecificOwner;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.MenuItemRepository;
 import com.foodordering.restaurant.repository.RestaurantRepository;
+import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
+import com.foodordering.restaurant.exceptions.DuplicateResourceException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +21,6 @@ public class MenuItemService {
     @Autowired
     private MenuItemRepository menuItemRepository;
 
-    @Autowired
-    private RestaurantService restaurantService;
 
     @Autowired
     private RestaurantRepository restaurantRepository;
@@ -26,22 +28,14 @@ public class MenuItemService {
     @Autowired
     private ImageService imageService;
 
-    private void validateAccess(Restaurant restaurant, UserDTO user, String action) {
-        restaurantService.authorizeUser(user, action);
-        if (!"ADMIN".equals(user.getRole())) {
-            restaurantService.isTheSameOwner(restaurant, user);
-        }
-    }
-
-    public MenuItem addMenuItem(Long restaurantId, MenuItem item, UserDTO owner) {
+    @OnlySpecificOwner
+    public MenuItem addMenuItem(Long restaurantId, UserDTO owner, MenuItem item) {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-
-        validateAccess(restaurant, owner, "add menu item");
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (menuItemRepository.existsByNameAndRestaurant_Id(item.getName(), restaurantId)) {
-            throw new RuntimeException("Menu item already exists");
+            throw new DuplicateResourceException("Menu item already exists");
         }
 
         item.setRestaurant(restaurant);
@@ -53,30 +47,29 @@ public class MenuItemService {
         return menuItemRepository.findByRestaurantId(restaurantId);
     }
 
-    public MenuItem updateMenuItem(Long id, MenuItem updated, UserDTO owner) {
+    @OnlySpecificOwner
+    public MenuItem updateMenuItem(Long id, UserDTO owner, MenuItem updated) {
 
         MenuItem item = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 
-        validateAccess(item.getRestaurant(), owner, "update menu item");
         applyPartialUpdates(item, updated);
         return menuItemRepository.save(item);
     }
 
+    @CheckOwnerAndAdmin
     public void deleteMenuItem(Long id, UserDTO owner) {
-        MenuItem item = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu item not found"));
-
-        validateAccess(item.getRestaurant(), owner, "delete menu items");
+        menuItemRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 
         menuItemRepository.deleteById(id);
     }
 
     public List<MenuItem> getByCategory(String category) {
-        return menuItemRepository.findByCategory(category);
+        return menuItemRepository.findByCategoryName(category);
     }
 
-    public List<MenuItem> getOffers() {
+    public List<MenuItem> getDiscounts() {
         return menuItemRepository.findByDiscountGreaterThan(0);
     }
 
@@ -105,12 +98,11 @@ public class MenuItemService {
         }
     }
 
-    public String uploadImage(Long id, MultipartFile file, UserDTO owner) {
+    @OnlySpecificOwner
+    public String uploadImage(Long id, UserDTO owner, MultipartFile file) {
 
         MenuItem item = menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu item not found"));
-
-         validateAccess(item.getRestaurant(), owner, "upload image");
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 
         String imageUrl = imageService.uploadImage(file);
 

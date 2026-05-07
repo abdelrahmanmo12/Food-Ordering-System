@@ -4,9 +4,17 @@ import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.enums.AdminStatus;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.repository.RestaurantRepository;
+import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
+import com.foodordering.restaurant.exceptions.UnauthorizedAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.foodordering.restaurant.aspect.Interfaces.AdminOnly;
+import com.foodordering.restaurant.aspect.Interfaces.CheckOwnerAndAdmin;
+import com.foodordering.restaurant.aspect.Interfaces.OnlyOwner;
+import com.foodordering.restaurant.aspect.Interfaces.OnlySpecificOwner;
 
 import java.util.List;
 
@@ -19,30 +27,31 @@ public class RestaurantService {
     @Autowired
     private ImageService imageService;
 
-    public List<Restaurant> getAllRestaurants() {
-        return restaurantRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<Restaurant> getAllPublicRestaurants() {
+        return restaurantRepository.findByStatus(AdminStatus.APPROVED);
     }
 
     public Restaurant getRestaurantById(Long id) {
         return (Restaurant) restaurantRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
 
-    public Restaurant addRestaurant(Restaurant restaurant, UserDTO owner) {
-
-        authorizeUser(owner, "add a new restaurant");
-
+    @OnlyOwner
+    public Restaurant addRestaurant(UserDTO owner, Restaurant restaurant) {
+        
         try {
             Long id = Long.valueOf(owner.getId());
             restaurant.setOwnerId(id);
         } catch (NumberFormatException e) {
-            throw new RuntimeException("Invalid User ID format");
+            throw new IllegalArgumentException("Invalid User ID format");
         }
 
         return restaurantRepository.save(restaurant);
     }
 
-    public Restaurant updateRestaurant(Long id, Restaurant updated, UserDTO owner) {
+    @OnlySpecificOwner
+    public Restaurant updateRestaurant(Long id, UserDTO owner, Restaurant updated) {
 
         System.out.println("=== SERVICE ===");
         System.out.println("THREAD: " + Thread.currentThread().getId());
@@ -50,26 +59,18 @@ public class RestaurantService {
 
         System.out.println(owner.getRole());
 
-        authorizeUser(owner, "update this restaurant");
-
         Restaurant restaurant = getRestaurantById(id);
-        if (!"ADMIN".equals(owner.getRole())) {
-            isTheSameOwner(restaurant, owner);
-        }
         applyRestaurantUpdates(restaurant, updated);
 
         return restaurantRepository.save(restaurant);
     }
 
+    @CheckOwnerAndAdmin
     public void deleteRestaurant(Long id, UserDTO owner) {
-        authorizeUser(owner, "delete this restaurant");
-
-        Restaurant restaurant = getRestaurantById(id);
-
-        if (!"ADMIN".equals(owner.getRole())) {
-            isTheSameOwner(restaurant, owner);
+        if (!existsById(id)) {
+            throw new ResourceNotFoundException("Restaurant not found");
         }
-
+        
         restaurantRepository.deleteById(id);
     }
 
@@ -83,12 +84,12 @@ public class RestaurantService {
         if ("OWNER".equals(role) && "ACTIVE".equals(owner.getStatus())) {
             return;
         }
-        throw new RuntimeException("Access Denied: You must be an ADMIN or an ACTIVE OWNER to " + message);
+        throw new UnauthorizedAccessException("Access Denied: You must be an ADMIN or an ACTIVE OWNER to " + message);
     }
 
     public void isTheSameOwner(Restaurant restaurant, UserDTO owner) {
         if (!owner.getId().equals(String.valueOf(restaurant.getOwnerId()))) {
-            throw new RuntimeException("You are not the owner of this restaurant");
+            throw new UnauthorizedAccessException("You are not the owner of this restaurant");
         }
     }
 
@@ -107,33 +108,32 @@ public class RestaurantService {
         }
     }
 
+    @CheckOwnerAndAdmin
     public Restaurant toggleOpeningStatus(Long id, UserDTO owner) {
         Restaurant restaurant = getRestaurantById(id);
 
-        authorizeUser(owner, "to toggle this restaurant");
-
-        isTheSameOwner(restaurant, owner);
-
         if (restaurant.getStatus() != AdminStatus.APPROVED) {
-            throw new RuntimeException("You can't toggle it untill the restaurant is approved");
+            throw new IllegalStateException("You can't toggle it until the restaurant is approved");
         }
 
         restaurant.setOpened(!restaurant.isOpened());
         return restaurantRepository.save(restaurant);
     }
 
+    @AdminOnly
     public List<Restaurant> getAllPendingRestaurants(String role) {
         if (!"ADMIN".equals(role)) {
-            throw new RuntimeException("Only admins can view pending restaurants");
+            throw new UnauthorizedAccessException("Only admins can view pending restaurants");
         }
         List<Restaurant> restaurants = restaurantRepository.findByStatus(AdminStatus.PENDING);
         return restaurants;
 
     }
 
+    @AdminOnly
     public String updateRestaurantStatus(Long id, String role, AdminStatus newStatus) {
         if (!"ADMIN".equals(role)) {
-            throw new RuntimeException("Only admins can approve restaurants");
+            throw new UnauthorizedAccessException("Only admins can approve restaurants");
         }
         Restaurant restaurant = getRestaurantById(id);
 
@@ -147,13 +147,9 @@ public class RestaurantService {
         return "Restaurant status updated to " + newStatus;
     }
 
-    public String uploadImage(Long id, MultipartFile file, UserDTO owner) {
-
-        if (!"OWNER".equals(owner.getRole())) {
-            throw new RuntimeException("Only owners can upload images");
-        }
+    @OnlySpecificOwner
+    public String uploadImage(Long id, UserDTO owner, MultipartFile file) {
         Restaurant restaurant = getRestaurantById(id);
-        isTheSameOwner(restaurant, owner);
 
         String imageUrl = imageService.uploadImage(file);
 
@@ -164,5 +160,22 @@ public class RestaurantService {
         return imageUrl;
 
     }
+
+    @CheckOwnerAndAdmin
+    public void deleteImage(Long id, UserDTO admin) {
+        
+        Restaurant restaurant = getRestaurantById(id);
+        if (restaurant.getImageUrl() != null) {
+            imageService.deleteImage(restaurant.getImageUrl());
+            restaurant.setImageUrl(null);
+            restaurantRepository.save(restaurant);
+        }
+    }
+
+    public boolean existsById(Long id) {
+        return restaurantRepository.existsById(id);
+    }
+
+    
 
 }

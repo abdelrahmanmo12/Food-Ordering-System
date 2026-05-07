@@ -9,10 +9,18 @@ spring:
       gateway:
         routes:
 
-          - id: auth-service
+          - id: auth-service-public
+            uri: lb://AUTH-SERVICE
+            predicates:
+              - Path=/auth/login,/auth/register/**,/auth/refresh
+
+          - id: auth-service-private
             uri: lb://AUTH-SERVICE
             predicates:
               - Path=/auth/**
+            filters:
+              - AuthenticationFilter
+              
 
           - id: restaurant-admin
             uri: lb://RESTAURANT-SERVICE
@@ -25,13 +33,19 @@ spring:
           - id: restaurant-public
             uri: lb://RESTAURANT-SERVICE
             predicates:
-              - Path=/restaurants
+              - Path=/restaurants/**
               - Method=GET
 
           - id: menu-public
             uri: lb://RESTAURANT-SERVICE
             predicates:
               - Path=/menu/**
+              - Method=GET
+
+          - id: offer-public
+            uri: lb://RESTAURANT-SERVICE
+            predicates:
+              - Path=/offers/**
               - Method=GET
 
           - id: restaurant-private
@@ -47,6 +61,22 @@ spring:
             predicates:
               - Path=/menu/**
               - Method=POST,PUT,DELETE,PATCH
+            filters:
+              - AuthenticationFilter
+
+          - id: offer-private
+            uri: lb://RESTAURANT-SERVICE
+            predicates:
+              - Path=/offers/**
+              - Method=POST,PUT,DELETE,PATCH
+            filters:
+              - AuthenticationFilter
+
+          # USERSERVICE
+          - id: user-profiles
+            uri: lb://USER-SERVICE
+            predicates:
+              - Path=/users/profiles/**
             filters:
               - AuthenticationFilter
 
