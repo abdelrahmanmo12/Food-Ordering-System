@@ -33,6 +33,7 @@ public class Notification {
     private String message;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean isRead = false;
 
     @CreationTimestamp

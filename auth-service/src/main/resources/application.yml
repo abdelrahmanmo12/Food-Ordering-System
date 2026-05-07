@@ -1,11 +1,13 @@
 spring:
   application:
     name: auth-service
+
   datasource:
     url: jdbc:mysql://localhost:3306/userauthdb
     username: root
-    password: "123456789"
+    password: "Password"
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -14,24 +16,37 @@ spring:
       hibernate:
         format_sql: true
     database-platform: org.hibernate.dialect.MySQLDialect
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      group-id: auth-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
 server:
   port: 8081
 
+
 eureka:
   instance:
-    prefer-ip-address: true 
+    prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/ 
+      defaultZone: http://localhost:8761/eureka/
     fetch-registry: true
     register-with-eureka: true
 
- kafka:
-    topics:
-      user-registered: user-registered
-   spring.kafka.bootstrap-servers: localhost:9092
-   spring.kafka.producer.key-serializer: org.apache.kafka.common.serialization.StringSerializer
-   spring.kafka.producer.value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+kafka:
+  topics:
+    user-registered: user-registered
 
 
 jwt:
@@ -58,6 +73,7 @@ jwt:
       DthjoRuBAoGBAI7Qy6BpvOlPlQvxCWAoVvxl7S+gn0xsB6X2I0FO/VcDOPp6BlwTb4+sXG5CIL/Mdlhd
       mRKunHOdxN6LokUyDPvvh8XHTNCQMddIloc/Sckwh8cCwBM3zYf7gIwH1lCvsJ9W/scKcnXylllflOUj
       vMzeCWPC60c74f3+4r66zRp6
+
   public:
     key: >-
       MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqL9qG0qA5i0Hjm5LvUH2j70tu17pYrUi+U6o
