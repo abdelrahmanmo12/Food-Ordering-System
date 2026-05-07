@@ -7,48 +7,23 @@ import java.util.List;
 
 public interface OrderService {
 
-    // ================= ORDER =================
-
     OrderCreationResponse createOrder(OrderRequest request);
+    List<OrderResponse> getOrders(String customerId);           // ✅
+    void cancelOrder(String orderNumber);
 
-    List<OrderResponse> getOrders(String phone);
+    CartResponse addToCart(String customerId, String itemName, int quantity, String restaurantName);
+    CartResponse addToCart(String customerId, String itemName, int quantity, Long restaurantId);
+    CartResponse addToCart(String customerId, List<CartItemRequest> items, String restaurantName);
+    CartResponse getCart(String customerId);                    // ✅
+    void clearCart(String customerId);                          // ✅
+    CartResponse removeFromCart(String customerId, String itemName); // ✅
 
-    void cancelOrder(String id);
-
-
-    // ================= CART =================
-
-    CartResponse addToCart(String phone, String itemName, int quantity, String restaurantName);
-
-    CartResponse addToCart(String phone, String itemName, int quantity, Long restaurantId);
-
-    CartResponse addToCart(String phone, List<CartItemRequest> items, String restaurantName);
-
-    CartResponse getCart(String phone);
-
-    void clearCart(String phone);
-
-
-    // ================= CHECKOUT =================
-
-    OrderResponse checkout(String phone, CheckoutRequest request);
-
-
-    // ================= ADMIN =================
+    OrderResponse checkout(String customerId, CheckoutRequest request); // ✅
 
     List<OrderResponse> getAllOrders();
-
-    OrderResponse updateOrderStatus(String id, OrderStatus status);
-
-    void deleteOrder(String id);
-
-
-    // ================= RESTAURANT =================
+    OrderResponse updateOrderStatus(String orderNumber, OrderStatus status);
+    void deleteOrder(String orderNumber);
 
     List<RestaurantOrderResponse> getOrdersByRestaurant(String restaurantName);
-
-
-    // ================= TRACKING =================
-
     OrderTrackingResponse trackOrder(String orderNumber);
 }

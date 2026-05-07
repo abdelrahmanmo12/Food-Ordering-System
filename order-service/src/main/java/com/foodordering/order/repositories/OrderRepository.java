@@ -9,9 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
-
-    List<Order> findByPhone(String phone);
-    List<Order> findByRestaurantName(String restaurantName);
     Optional<Order> findByOrderNumber(String orderNumber);
-
+    List<Order> findByCustomerId(String customerId);        // ✅ was findByPhone
+    List<Order> findByRestaurantName(String restaurantName);
 }

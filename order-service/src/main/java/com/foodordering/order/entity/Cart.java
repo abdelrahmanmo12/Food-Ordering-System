@@ -16,7 +16,7 @@ public class Cart {
     @Id
     private String id;
 
-    private String phone;
+    private String customerId;
     private String restaurantName;
     private List<OrderItem> items;
 }

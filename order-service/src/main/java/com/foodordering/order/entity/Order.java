@@ -18,7 +18,7 @@ public class Order {
     private String id;
 
     private String customerName;
-    private String phone;
+    private String customerId;
     private String address;
     private String orderNumber;
 

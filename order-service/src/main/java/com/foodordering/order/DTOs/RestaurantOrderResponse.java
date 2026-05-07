@@ -11,7 +11,7 @@ import java.util.List;
 public class RestaurantOrderResponse {
     private String orderNumber;
     private String customerName;
-    private String phone;
+    private String customerId;
     private String address;
     private List<OrderItem> items;
     private double totalPrice;

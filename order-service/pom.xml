@@ -67,6 +67,12 @@
 			<artifactId>spring-cloud-starter-loadbalancer</artifactId>
 		</dependency>
 
+		<!-- AOP -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
 		<!-- LOMBOK -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>

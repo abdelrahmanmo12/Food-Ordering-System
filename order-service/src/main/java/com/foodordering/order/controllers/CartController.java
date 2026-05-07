@@ -14,28 +14,32 @@ public class CartController {
 
     private final OrderServiceImpl orderService;
 
-    // Add multiple items to cart at once
     @PostMapping
     public ResponseEntity<CartResponse> addToCart(@RequestBody CartRequest request) {
         return ResponseEntity.ok(
                 orderService.addToCart(
-                        request.getPhone(),
-                        request.getItems(),           // ← list not single item
+                        request.getCustomerId(),            // ✅
+                        request.getItems(),
                         request.getRestaurantName()
                 )
         );
     }
 
-    // View cart
-    @GetMapping("/{phone}")
-    public ResponseEntity<CartResponse> getCart(@PathVariable String phone) {
-        return ResponseEntity.ok(orderService.getCart(phone));
+    @GetMapping("/{customerId}")                                            // ✅
+    public ResponseEntity<CartResponse> getCart(@PathVariable String customerId) {
+        return ResponseEntity.ok(orderService.getCart(customerId));
     }
 
-    // Clear cart
-    @DeleteMapping("/{phone}")
-    public ResponseEntity<String> clearCart(@PathVariable String phone) {
-        orderService.clearCart(phone);
+    @DeleteMapping("/{customerId}")                                         // ✅
+    public ResponseEntity<String> clearCart(@PathVariable String customerId) {
+        orderService.clearCart(customerId);
         return ResponseEntity.ok("Cart cleared successfully");
+    }
+
+    @DeleteMapping("/{customerId}/items/{itemName}")                        // ✅
+    public ResponseEntity<CartResponse> removeFromCart(
+            @PathVariable String customerId,
+            @PathVariable String itemName) {
+        return ResponseEntity.ok(orderService.removeFromCart(customerId, itemName));
     }
 }
