@@ -1,16 +1,15 @@
 package com.foodordering.order.DTOs;
 
-import lombok.*;
+import lombok.Data;
+
 import java.util.List;
 
 @Data
 public class OrderRequest {
 
-    private String customerName;
-    private String phone;
+    private Long restaurantId;
+    private String customerId;
     private String address;
-
-    private String restaurantName;
-
+    private String paymentMethod;
     private List<OrderItemRequest> items;
 }

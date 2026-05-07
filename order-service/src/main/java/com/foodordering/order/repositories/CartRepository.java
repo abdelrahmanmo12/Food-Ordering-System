@@ -6,8 +6,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface CartRepository extends MongoRepository<Cart, String> {
-    Optional<Cart> findByPhone(String phone);
-    void deleteByPhone(String phone);
-
-
+    Optional<Cart> findByCustomerId(String customerId);     // ✅ was findByPhone
+    void deleteByCustomerId(String customerId);             // ✅ was deleteByPhone
 }

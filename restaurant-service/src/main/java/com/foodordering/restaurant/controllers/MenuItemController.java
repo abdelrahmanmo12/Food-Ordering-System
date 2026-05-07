@@ -6,12 +6,14 @@ import com.foodordering.restaurant.models.MenuCategory;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.services.MenuCategoryService;
 import com.foodordering.restaurant.services.MenuItemService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/menu")
@@ -74,6 +76,13 @@ public class MenuItemController {
         List<MenuItem> items = menuItemService.getByCategory(category);
         return ResponseEntity.ok(items);
     }
+    @GetMapping("/item")
+    public MenuItem getItem(
+            @RequestParam Long restaurantId,
+            @RequestParam String itemName
+    ) {
+        return menuItemService.getItemByRestaurantAndName(restaurantId, itemName);
+    }
 
     @GetMapping("/discounts")
     public ResponseEntity<List<MenuItem>> getDiscounts() {
@@ -120,5 +129,30 @@ public class MenuItemController {
         UserDTO owner = UserContext.getUser();
         menuCategoryService.deleteCategory(id, owner);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/items")
+    public List<MenuItem> getAllItems() {
+        return menuItemService.getAllItems();
+    }
+
+    @GetMapping("/item/{id}")
+    public MenuItem getItemById(@PathVariable Long id) {
+        return menuItemService.getItemById(id);
+    }
+
+    // Add multiple items at once
+    @PostMapping("/bulk/{restaurantId}")
+    public ResponseEntity<List<MenuItem>> addBulkItems(
+            @PathVariable Long restaurantId,
+            @RequestBody List<MenuItem> items) {
+        return ResponseEntity.ok(menuItemService.addBulkMenuItems(restaurantId, items));
+    }
+
+    // Get full menu grouped by category
+    @GetMapping("/{restaurantId}/menu")
+    public ResponseEntity<Map<String, List<MenuItem>>> getFullMenu(
+            @PathVariable Long restaurantId) {
+        return ResponseEntity.ok(menuItemService.getMenuGroupedByCategory(restaurantId));
     }
 }

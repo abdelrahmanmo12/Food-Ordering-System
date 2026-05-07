@@ -14,4 +14,6 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
     List<MenuItem> findByCategoryName(String categoryName);
     List<MenuItem> findByDiscountGreaterThan(double discount);
     boolean existsByNameAndRestaurant_Id(String name, Long restaurantId);
+
+    MenuItem findByRestaurantIdAndNameIgnoreCase(Long restaurantId, String name);
 }

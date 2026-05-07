@@ -20,6 +20,7 @@ public class MenuItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "item_id")
     private Long id;
 
     private String name;
@@ -27,6 +28,8 @@ public class MenuItem {
     private Double price;
     private Boolean available = true;
     private Double discount;
+    private int stock; 
+
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp

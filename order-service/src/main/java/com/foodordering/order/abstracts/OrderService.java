@@ -1,19 +1,29 @@
 package com.foodordering.order.abstracts;
 
 import com.foodordering.order.DTOs.*;
+import com.foodordering.order.entity.OrderStatus;
 
 import java.util.List;
 
 public interface OrderService {
 
-    com.foodordering.order.DTOs.OrderResponse createOrder(com.foodordering.order.DTOs.OrderRequest request);
+    OrderCreationResponse createOrder(OrderRequest request);
+    List<OrderResponse> getOrders(String customerId);           // ✅
+    void cancelOrder(String orderNumber);
 
-    List<com.foodordering.order.DTOs.OrderResponse> getOrders(String phone);
+    CartResponse addToCart(String customerId, String itemName, int quantity, String restaurantName);
+    CartResponse addToCart(String customerId, String itemName, int quantity, Long restaurantId);
+    CartResponse addToCart(String customerId, List<CartItemRequest> items, String restaurantName);
+    CartResponse getCart(String customerId);                    // ✅
+    void clearCart(String customerId);                          // ✅
+    CartResponse removeFromCart(String customerId, String itemName); // ✅
 
-    void cancelOrder(String id);
+    OrderResponse checkout(String customerId, CheckoutRequest request); // ✅
 
-    // CART
-    com.foodordering.order.DTOs.CartResponse getCart(String phone);
-    com.foodordering.order.DTOs.CartResponse addToCart(String phone, String itemName, int quantity, String restaurantName);
-    void clearCart(String phone);
+    List<OrderResponse> getAllOrders();
+    OrderResponse updateOrderStatus(String orderNumber, OrderStatus status);
+    void deleteOrder(String orderNumber);
+
+    List<RestaurantOrderResponse> getOrdersByRestaurant(String restaurantName);
+    OrderTrackingResponse trackOrder(String orderNumber);
 }

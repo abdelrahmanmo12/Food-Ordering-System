@@ -5,6 +5,7 @@ import com.foodordering.restaurant.dtos.RestaurantDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.services.RestaurantService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ public class RestaurantController {
 
     @Autowired
     private RestaurantService restaurantService;
+
 
     @GetMapping
     public ResponseEntity<List<RestaurantDTO>> getPublicRestaurants() {
@@ -128,5 +130,16 @@ public class RestaurantController {
 
         boolean isFound = restaurantService.existsById(id);
         return ResponseEntity.ok(isFound);
+    }
+
+
+    @GetMapping("/name/{name}")
+    public ResponseEntity<Restaurant> getByName(@PathVariable String name) {
+        Restaurant dto = restaurantService.getRestaurantByName(name);
+        return ResponseEntity.ok(dto);
+    }
+    @GetMapping("/search")
+    public List<Restaurant> search(@RequestParam String name) {
+        return restaurantService.searchByName(name);
     }
 }
