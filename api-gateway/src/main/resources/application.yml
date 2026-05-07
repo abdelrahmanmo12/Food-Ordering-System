@@ -42,6 +42,12 @@ spring:
               - Path=/menu/**
               - Method=GET
 
+          - id: offer-public
+            uri: lb://RESTAURANT-SERVICE
+            predicates:
+              - Path=/offers/**
+              - Method=GET
+
           - id: restaurant-private
             uri: lb://RESTAURANT-SERVICE
             predicates:
@@ -58,6 +64,13 @@ spring:
             filters:
               - AuthenticationFilter
 
+          - id: offer-private
+            uri: lb://RESTAURANT-SERVICE
+            predicates:
+              - Path=/offers/**
+              - Method=POST,PUT,DELETE,PATCH
+            filters:
+              - AuthenticationFilter
 
           # USERSERVICE
           - id: user-profiles

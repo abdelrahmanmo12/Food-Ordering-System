@@ -3,10 +3,8 @@ package com.foodordering.restaurant.controllers;
 import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.RestaurantDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
-import com.foodordering.restaurant.models.Offer;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.services.RestaurantService;
-import com.foodordering.restaurant.services.OfferService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,9 +18,6 @@ public class RestaurantController {
 
     @Autowired
     private RestaurantService restaurantService;
-
-    @Autowired
-    private OfferService offerService;
 
     @GetMapping
     public ResponseEntity<List<RestaurantDTO>> getPublicRestaurants() {
@@ -128,37 +123,10 @@ public class RestaurantController {
         return dto;
     }
 
-    @PostMapping("/{restaurantId}/offers")
-    public ResponseEntity<Offer> createOffer(@PathVariable Long restaurantId, 
-                                           @RequestBody Offer offer) {
-        UserDTO owner = UserContext.getUser();
-        return ResponseEntity.status(201).body(offerService.createOffer(restaurantId, owner, offer));
-    }
-
-    @GetMapping("/offers/active")
-    public ResponseEntity<List<Offer>> getActiveOffers() {
-        return ResponseEntity.ok(offerService.getAllActiveOffers());
-    }
-
-    @PutMapping("/offers/{id}")
-    public ResponseEntity<Offer> updateOffer(@PathVariable Long id, @RequestBody Offer offer) {
-        UserDTO owner = UserContext.getUser();
-        Offer updatedOffer = offerService.updateOffer(id, owner, offer);
-        return ResponseEntity.ok(updatedOffer);
-    }
-
-    @DeleteMapping("/offers/{id}")
-    public ResponseEntity<Void> deleteOffer(@PathVariable Long id) {
-        UserDTO owner = UserContext.getUser();
-        offerService.deleteOffer(id, owner);
-        return ResponseEntity.noContent().build();
-    }
-
-
     @GetMapping("/internal/exists/{id}")
     public ResponseEntity<Boolean> exists(@PathVariable Long id) {
 
-        boolean isFound = restaurantService.existsById(id); 
+        boolean isFound = restaurantService.existsById(id);
         return ResponseEntity.ok(isFound);
     }
 }

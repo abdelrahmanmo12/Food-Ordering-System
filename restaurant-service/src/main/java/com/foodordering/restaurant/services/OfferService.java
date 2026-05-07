@@ -11,7 +11,8 @@ import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -28,12 +29,19 @@ public class OfferService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
+        if (offer.getStartDate() == null) {
+            offer.setStartDate(Instant.now());
+        }
+        if (offer.getEndDate() == null) {
+            offer.setEndDate(offer.getStartDate().plus(30, ChronoUnit.DAYS));
+        }
+
         offer.setRestaurant(restaurant);
         return offerRepository.save(offer);
     }
 
     public List<Offer> getAllActiveOffers() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return offerRepository.findByStartDateBeforeAndEndDateAfter(now, now);
     }
 
@@ -67,5 +75,14 @@ public class OfferService {
                 .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));
 
         offerRepository.deleteById(id);
+    }
+
+    public List<Offer> getOffersByRestaurant(Long restaurantId) {
+        return offerRepository.findByRestaurantId(restaurantId);
+    }
+
+    public Offer getOfferById(Long id) {
+        return offerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));
     }
 }

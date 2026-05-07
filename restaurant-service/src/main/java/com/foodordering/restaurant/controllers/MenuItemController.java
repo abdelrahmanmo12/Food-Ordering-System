@@ -75,10 +75,10 @@ public class MenuItemController {
         return ResponseEntity.ok(items);
     }
 
-    @GetMapping("/offers")
-    public ResponseEntity<List<MenuItem>> getOffers() {
+    @GetMapping("/discounts")
+    public ResponseEntity<List<MenuItem>> getDiscounts() {
 
-        List<MenuItem> items = menuItemService.getOffers();
+        List<MenuItem> items = menuItemService.getDiscounts();
         return ResponseEntity.ok(items);
     }
 

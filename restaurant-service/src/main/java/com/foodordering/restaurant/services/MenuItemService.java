@@ -69,7 +69,7 @@ public class MenuItemService {
         return menuItemRepository.findByCategoryName(category);
     }
 
-    public List<MenuItem> getOffers() {
+    public List<MenuItem> getDiscounts() {
         return menuItemRepository.findByDiscountGreaterThan(0);
     }
 
