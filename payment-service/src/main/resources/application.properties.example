@@ -1,21 +1,25 @@
 spring.application.name=payment-service
+
+# Server Configuration
 server.port=8084
 
-# Database Configuration
-spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-spring.datasource.username=${SPRING_DATASOURCE_USERNAME:root}
-spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:Password}
+# Database Configuration - MySQL
+# Set DB_PASSWORD environment variable or replace ${DB_PASSWORD} with actual password
+spring.datasource.url=jdbc:mysql://localhost:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=${DB_PASSWORD:your_password_here}
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 # JPA Configuration
-spring.jpa.hibernate.ddl-auto=update
+spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
 
 # Stripe Configuration
-stripe.secret.key=${STRIPE_SECRET_KEY:sk_test_placeholder}
-stripe.webhook.secret=${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+# Get your keys from: https://dashboard.stripe.com/apikeys
+stripe.secret.key=${STRIPE_SECRET_KEY:your_stripe_secret_key_here}
+stripe.webhook.secret=${STRIPE_WEBHOOK_SECRET:your_stripe_webhook_secret_here}
 
 # Eureka Client Configuration
 eureka.client.service-url.defaultZone=${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
@@ -23,14 +27,12 @@ eureka.instance.prefer-ip-address=true
 eureka.client.register-with-eureka=true
 eureka.client.fetch-registry=true
 
-# Gateway internal-auth header. Keep this in sync with api-gateway AuthenticationFilter.
-internal.gateway.secret=${INTERNAL_GATEWAY_SECRET:MySuperSecretKey123}
-
-# OAuth2 Resource Server Configuration for direct service calls.
+# OAuth2 Resource Server Configuration
 spring.security.oauth2.resourceserver.jwt.jwk-set-uri=${AUTH_SERVICE_JWK_URI:http://localhost:8083/.well-known/jwks.json}
 spring.security.oauth2.resourceserver.jwt.issuer-uri=${AUTH_SERVICE_ISSUER_URI:http://localhost:8083}
 
 # Actuator Configuration
+# Expose only necessary endpoints for security
 management.endpoints.web.exposure.include=health,info
 management.health.defaults.enabled=true
 

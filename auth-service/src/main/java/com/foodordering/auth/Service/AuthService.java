@@ -93,7 +93,6 @@ public class AuthService {
         return new RefreshTokenResponse(request.getRefreshToken(), newAccessToken);
     }
 
-    // Kept for manual/debug use — gateway no longer calls this endpoint
     public ResponseEntity<?> validateToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Header");

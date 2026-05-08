@@ -48,8 +48,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(
-            @RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<?> logout(@RequestHeader("X-User-Id") String userId) {
         authService.logout(userId);
         return ResponseEntity.ok("Logged out successfully");
     }
