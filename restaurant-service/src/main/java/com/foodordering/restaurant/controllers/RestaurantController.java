@@ -5,6 +5,9 @@ import com.foodordering.restaurant.dtos.RestaurantDTO;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Restaurant;
 import com.foodordering.restaurant.services.RestaurantService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,7 +39,7 @@ public class RestaurantController {
     }
 
     @PostMapping
-    public ResponseEntity<RestaurantDTO> add(@RequestBody Restaurant restaurant) {
+    public ResponseEntity<RestaurantDTO> add(@RequestBody @Valid Restaurant restaurant) {
 
         UserDTO owner = UserContext.getUser();
         if (owner == null) {
@@ -121,6 +124,10 @@ public class RestaurantController {
         dto.setDescription(restaurant.getDescription());
         dto.setImageUrl(restaurant.getImageUrl());
         dto.setOpened(restaurant.isOpened());
+        dto.setOwnerId(restaurant.getOwnerId());
+        if (restaurant.getStatus() != null) {
+            dto.setStatus(restaurant.getStatus().name());
+        }
         return dto;
     }
 
@@ -133,12 +140,13 @@ public class RestaurantController {
 
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<Restaurant> getByName(@PathVariable String name) {
-        Restaurant dto = restaurantService.getRestaurantByName(name);
-        return ResponseEntity.ok(dto);
+    public ResponseEntity<RestaurantDTO> getByName(@PathVariable String name) {
+        Restaurant restaurant = restaurantService.getRestaurantByName(name);
+        return ResponseEntity.ok(convertToDto(restaurant));
     }
+
     @GetMapping("/search")
-    public List<Restaurant> search(@RequestParam String name) {
-        return restaurantService.searchByName(name);
+    public List<RestaurantDTO> search(@RequestParam String name) {
+        return restaurantService.searchByName(name).stream().map(this::convertToDto).toList();
     }
 }

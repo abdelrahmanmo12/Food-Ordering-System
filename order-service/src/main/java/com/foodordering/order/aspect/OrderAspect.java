@@ -1,13 +1,15 @@
 package com.foodordering.order.aspect;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.foodordering.order.DTOs.CheckoutRequest;
 import com.foodordering.order.DTOs.OrderCreationResponse;
 import com.foodordering.order.DTOs.OrderRequest;
 import com.foodordering.order.DTOs.OrderResponse;
+import com.foodordering.order.entity.Order;
 import com.foodordering.order.entity.OrderAuditLog;
 import com.foodordering.order.exceptions.InvalidOrderException;
 import com.foodordering.order.repositories.OrderAuditLogRepository;
+import com.foodordering.order.repositories.OrderRepository;
+
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -21,10 +23,12 @@ import java.time.LocalDateTime;
 @Component
 public class OrderAspect {
 
+    private final OrderRepository orderRepository;
     private final OrderAuditLogRepository orderAuditLogRepository;
     private final ObjectMapper objectMapper;
 
-    public OrderAspect(OrderAuditLogRepository orderAuditLogRepository, ObjectMapper objectMapper) {
+    public OrderAspect(OrderRepository orderRepository, OrderAuditLogRepository orderAuditLogRepository, ObjectMapper objectMapper) {
+        this.orderRepository = orderRepository;
         this.orderAuditLogRepository = orderAuditLogRepository;
         this.objectMapper = objectMapper;
     }
@@ -100,16 +104,17 @@ public class OrderAspect {
     public void auditLogAfterCreateOrder(JoinPoint joinPoint, OrderCreationResponse result) {
         try {
             OrderRequest request = (OrderRequest) joinPoint.getArgs()[0];
+            Order order = orderRepository.findById(result.getOrderId()).orElse(null);
 
-            String orderSnapshot = serializeToJson(request);
+            String orderSnapshot = serializeToJson(order != null ? order : request);
 
             OrderAuditLog auditLog = OrderAuditLog.builder()
-                    .orderNumber("ORD-" + result.getOrderId())
-                    .phone(null)                                        // not in OrderRequest
-                    .customerName(null)                                 // not in OrderRequest
-                    .address(request.getAddress())                      // ✅ exists in OrderRequest
-                    .restaurantName(String.valueOf(request.getRestaurantId())) // ✅ exists in OrderRequest
-                    .totalPrice(0)                                      // not available at this stage
+                    .orderNumber(order != null ? order.getOrderNumber() : "ORD-" + result.getOrderId())
+                    .phone(order != null ? order.getPhone() : null)
+                    .customerName(order != null ? order.getCustomerName() : null)
+                    .address(order != null ? order.getAddress() : request.getAddress())
+                    .restaurantName(order != null ? order.getRestaurantName() : String.valueOf(request.getRestaurantId()))
+                    .totalPrice(order != null ? order.getTotalPrice() : 0)
                     .status("CREATED")
                     .orderSnapshot(orderSnapshot)
                     .triggeredBy("createOrder")
@@ -132,18 +137,17 @@ public class OrderAspect {
     @AfterReturning(pointcut = "checkoutMethod()", returning = "result")
     public void auditLogAfterCheckout(JoinPoint joinPoint, OrderResponse result) {
         try {
-            String phone = (String) joinPoint.getArgs()[0];                     // ✅ args[0]
-            CheckoutRequest request = (CheckoutRequest) joinPoint.getArgs()[1]; // ✅ args[1]
+            Order order = orderRepository.findById(result.getOrderId()).orElse(null);
 
             String orderSnapshot = serializeToJson(result);
 
             OrderAuditLog auditLog = OrderAuditLog.builder()
-                    .orderNumber(result.getOrderNumber())           // ✅ from OrderResponse
-                    .phone(phone)                                   // ✅ from args[0]
-                    .customerName(request.getCustomerName())        // ✅ from CheckoutRequest
-                    .address(request.getAddress())                  // ✅ from CheckoutRequest
-                    .restaurantName(result.getRestaurantName())     // ✅ from OrderResponse
-                    .totalPrice(result.getTotalPrice())             // ✅ from OrderResponse
+                    .orderNumber(result.getOrderNumber())
+                    .phone(order != null ? order.getPhone() : null)
+                    .customerName(order != null ? order.getCustomerName() : null)
+                    .address(order != null ? order.getAddress() : null)
+                    .restaurantName(result.getRestaurantName())
+                    .totalPrice(result.getTotalPrice())
                     .status(result.getStatus() != null
                             ? result.getStatus().toString()
                             : "UNKNOWN")                           // ✅ from OrderResponse

@@ -4,6 +4,9 @@ import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Offer;
 import com.foodordering.restaurant.services.OfferService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +21,7 @@ public class OfferController {
     private OfferService offerService;
 
     @PostMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<Offer> createOffer(@PathVariable Long restaurantId,
+    public ResponseEntity<Offer> createOffer(@PathVariable @Valid Long restaurantId,
             @RequestBody Offer offer) {
         UserDTO owner = UserContext.getUser();
         return ResponseEntity.status(201).body(offerService.createOffer(restaurantId, owner, offer));

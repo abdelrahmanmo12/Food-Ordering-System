@@ -88,10 +88,33 @@ public class UserService {
 
         return "registered";
     }
-    
 
-        public String changePassword(String email, ChangePasswordRequest request) {
-        User user = userRepo.findByEmail(email)
+    @Transactional
+    public String registerDelivery(@Valid RegisterRequest user) {
+
+        if (userRepo.findByEmail(user.getEmail()).isPresent()) {
+            throw new UsernameAlreadyExistsException("Email already taken");
+        }
+        User newUser = new User();
+        newUser.setEmail(user.getEmail());
+        newUser.setFullName(user.getFullName());
+        newUser.setRole(Role.DELIVERY); 
+        newUser.setStatus(AccountStatus.ACTIVE); 
+        newUser.setPassword(encoder.encode(user.getPassword())); 
+        newUser = userRepo.save(newUser);
+
+        UserProfileRequest profileClient = new UserProfileRequest();
+        profileClient.setId(newUser.getUser_id());
+        profileClient.setFullName(newUser.getFullName());
+        profileClient.setType("DELIVERY");
+
+        userServiceClient.createProfile(profileClient);
+
+        return "registered";
+    }
+
+        public String changePassword(String userId, ChangePasswordRequest request) {
+        User user = userRepo.findById(Long.valueOf(userId))
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!encoder.matches(request.getOldPassword(), user.getPassword())) {
