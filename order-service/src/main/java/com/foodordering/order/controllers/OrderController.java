@@ -39,7 +39,6 @@ public class OrderController {
         return ResponseEntity.ok(service.getOrders(userId));
     }
 
-    // Customer tracks a specific order by order number
     @GetMapping("/track/{orderNumber}")
     public ResponseEntity<OrderTrackingResponse> trackOrder(
             @PathVariable String orderNumber) {

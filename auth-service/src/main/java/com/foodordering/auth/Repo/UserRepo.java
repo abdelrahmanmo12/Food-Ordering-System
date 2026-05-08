@@ -14,6 +14,7 @@ import com.foodordering.auth.Enum.AccountStatus;
 @Repository
 public interface UserRepo extends JpaRepository<User, Long> {
         Optional<User> findByEmail(String email);
+
         
          List<User> findByStatus(AccountStatus status);
 }

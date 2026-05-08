@@ -62,22 +62,10 @@ public class UserController {
     @PutMapping("/change-password")
     public ResponseEntity<Map<String, String>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
-            Principal principal) {
+            @RequestHeader("X-User-Id") String userId) {
 
-        String responseMessage = userService.changePassword(principal.getName(), request);
+        String responseMessage = userService.changePassword(userId, request);
         return ResponseEntity.ok(Map.of("message", responseMessage));
     }
 
-    @GetMapping("/test-gateway")
-    public ResponseEntity<Map<String, String>> testGatewayHeaders(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Status") String status) {
-
-        Map<String, String> response = new HashMap<>();
-        response.put("extractedUserId", userId);
-        response.put("extractedUserRole", role);
-        response.put("extractedUserStatus", status);
-        return ResponseEntity.ok(response);
-    }
 }

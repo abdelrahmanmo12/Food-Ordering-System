@@ -113,8 +113,8 @@ public class UserService {
         return "registered";
     }
 
-        public String changePassword(String email, ChangePasswordRequest request) {
-        User user = userRepo.findByEmail(email)
+        public String changePassword(String userId, ChangePasswordRequest request) {
+        User user = userRepo.findById(Long.valueOf(userId))
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!encoder.matches(request.getOldPassword(), user.getPassword())) {
