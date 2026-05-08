@@ -6,7 +6,10 @@ import com.foodordering.order.clients.UserClient;
 import com.foodordering.order.DTOs.*;
 import com.foodordering.order.entity.*;
 import com.foodordering.order.exceptions.*;
+import com.foodordering.order.aspect.Interfaces.AdminOnly;
 import com.foodordering.order.repositories.*;
+import com.foodordering.order.aspect.Interfaces.CheckOwnerAndAdmin;
+import com.foodordering.order.aspect.Interfaces.OnlySpecificOwner;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -215,19 +218,22 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderResponse> getAllOrders() {
+    @AdminOnly
+    public List<OrderResponse> getAllOrders(UserDTO user) {
         return orderRepo.findAll().stream().map(this::map).toList();
     }
 
     @Override
-    public void deleteOrder(String orderNumber) {
+    @AdminOnly
+    public void deleteOrder(String orderNumber, UserDTO user) {
         Order order = orderRepo.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new OrderNotFoundException(orderNumber));
         orderRepo.deleteById(order.getId());
     }
 
     @Override
-    public OrderResponse updateOrderStatus(String orderNumber, OrderStatus status) {
+    @CheckOwnerAndAdmin
+    public OrderResponse updateOrderStatus(String orderNumber, UserDTO user, OrderStatus status) {
         Order order = orderRepo.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new OrderNotFoundException(orderNumber));
 
@@ -242,7 +248,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId) {
+    @OnlySpecificOwner
+    public List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId, UserDTO user) {
         return orderRepo.findByRestaurantId(restaurantId)
                 .stream()
                 .map(this::mapToRestaurantOrder)

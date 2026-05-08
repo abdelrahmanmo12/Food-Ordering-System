@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class RestaurantDTO {
     private Long id;
     private String name;
+    private Long ownerId;
     private String location;
     private String phone;
     private String description;

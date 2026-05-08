@@ -65,32 +65,35 @@ public class OrderController {
 
     @GetMapping("/admin/all")
     public ResponseEntity<List<OrderResponse>> getAllOrders(
-            @RequestHeader(value = "X-User-Role") String role) {
+            @RequestHeader(value = "X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status", required = true) String userStatus) {
 
-        if (!"ADMIN".equalsIgnoreCase(role)) {
-            return ResponseEntity.status(403).build(); // Forbidden
-        }
-        return ResponseEntity.ok(service.getAllOrders());
+        UserDTO user = new UserDTO(userId, role, userStatus);
+        return ResponseEntity.ok(service.getAllOrders(user));
     }
 
     @PatchMapping("/admin/{orderNumber}/status") // ✅ PATCH not PUT
     public ResponseEntity<OrderResponse> updateStatus(
+            @RequestHeader(value = "X-User-Id") String userId,
             @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status", required = true) String userStatus,
             @PathVariable String orderNumber,
             @RequestParam OrderStatus status) {
-        if (!"ADMIN".equalsIgnoreCase(role)) {
-            return ResponseEntity.status(403).build(); // Forbidden
-        }
-        return ResponseEntity.ok(service.updateOrderStatus(orderNumber, status));
+
+        UserDTO user = new UserDTO(userId, role, userStatus);
+        return ResponseEntity.ok(service.updateOrderStatus(orderNumber, user, status));
     }
 
     @DeleteMapping("/admin/{orderNumber}")
-    public ResponseEntity<String> deleteOrder(@RequestHeader(value = "X-User-Role") String role,
+    public ResponseEntity<String> deleteOrder(
+            @RequestHeader(value = "X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status", required = true) String userStatus,
             @PathVariable String orderNumber) {
-        if (!"ADMIN".equalsIgnoreCase(role)) {
-            return ResponseEntity.status(403).build(); // Forbidden
-        }
-        service.deleteOrder(orderNumber);
+
+        UserDTO user = new UserDTO(userId, role, userStatus);
+        service.deleteOrder(orderNumber, user);
         return ResponseEntity.ok("Order deleted successfully");
     }
 
@@ -98,18 +101,24 @@ public class OrderController {
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<List<RestaurantOrderResponse>> getOrdersByRestaurant(
+            @RequestHeader(value = "X-User-Id") String userId,
             @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status", required = true) String userStatus,
             @PathVariable Long restaurantId) {
-        if (!"OWNER".equalsIgnoreCase(role)) {
-            return ResponseEntity.status(403).build(); // Forbidden
-        }
-        return ResponseEntity.ok(service.getOrdersByRestaurant(restaurantId));
+        
+        UserDTO user = new UserDTO(userId, role, userStatus);
+        return ResponseEntity.ok(service.getOrdersByRestaurant(restaurantId, user));
     }
 
     @PatchMapping("/restaurant/{orderNumber}/status") // ✅ PATCH not PUT
     public ResponseEntity<OrderResponse> updateOrderStatus(
+            @RequestHeader(value = "X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Role") String role,
+            @RequestHeader(value = "X-User-Status", required = true) String userStatus,
             @PathVariable String orderNumber,
             @RequestParam OrderStatus status) {
-        return ResponseEntity.ok(service.updateOrderStatus(orderNumber, status));
+        
+        UserDTO user = new UserDTO(userId, role, userStatus);
+        return ResponseEntity.ok(service.updateOrderStatus(orderNumber, user, status));
     }
 }

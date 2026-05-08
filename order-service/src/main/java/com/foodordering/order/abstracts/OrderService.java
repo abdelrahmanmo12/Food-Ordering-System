@@ -20,10 +20,10 @@ public interface OrderService {
 
     OrderResponse checkout(Long customerId, CheckoutRequest request); // ✅
 
-    List<OrderResponse> getAllOrders();
-    OrderResponse updateOrderStatus(String orderNumber, OrderStatus status);
-    void deleteOrder(String orderNumber);
+    List<OrderResponse> getAllOrders(UserDTO user);
+    OrderResponse updateOrderStatus(String orderNumber, UserDTO user ,OrderStatus status);
+    void deleteOrder(String orderNumber, UserDTO user);
 
-    List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId);
+    List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId,UserDTO user);
     OrderTrackingResponse trackOrder(String orderNumber);
 }

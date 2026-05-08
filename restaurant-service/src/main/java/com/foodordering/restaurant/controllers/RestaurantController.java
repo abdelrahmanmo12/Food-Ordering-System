@@ -124,6 +124,7 @@ public class RestaurantController {
         dto.setDescription(restaurant.getDescription());
         dto.setImageUrl(restaurant.getImageUrl());
         dto.setOpened(restaurant.isOpened());
+        dto.setOwnerId(restaurant.getOwnerId());
         return dto;
     }
 
@@ -136,12 +137,13 @@ public class RestaurantController {
 
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<Restaurant> getByName(@PathVariable String name) {
-        Restaurant dto = restaurantService.getRestaurantByName(name);
-        return ResponseEntity.ok(dto);
+    public ResponseEntity<RestaurantDTO> getByName(@PathVariable String name) {
+        Restaurant restaurant = restaurantService.getRestaurantByName(name);
+        return ResponseEntity.ok(convertToDto(restaurant));
     }
+
     @GetMapping("/search")
-    public List<Restaurant> search(@RequestParam String name) {
-        return restaurantService.searchByName(name);
+    public List<RestaurantDTO> search(@RequestParam String name) {
+        return restaurantService.searchByName(name).stream().map(this::convertToDto).toList();
     }
 }

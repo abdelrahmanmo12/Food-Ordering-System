@@ -12,6 +12,9 @@
         @GetMapping("/restaurants/name/{name}")
         RestaurantDTO getByName(@PathVariable("name") String name);
 
+        @GetMapping("/restaurants/{id}")
+        RestaurantDTO getById(@PathVariable("id") Long id);
+
         @GetMapping("/menu/item")
         MenuItemDTO getItem(
                 @RequestParam("restaurantId") Long restaurantId,
