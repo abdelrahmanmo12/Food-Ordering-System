@@ -125,6 +125,9 @@ public class RestaurantController {
         dto.setImageUrl(restaurant.getImageUrl());
         dto.setOpened(restaurant.isOpened());
         dto.setOwnerId(restaurant.getOwnerId());
+        if (restaurant.getStatus() != null) {
+            dto.setStatus(restaurant.getStatus().name());
+        }
         return dto;
     }
 

@@ -16,4 +16,5 @@ public class RestaurantDTO {
     private String description;
     private String imageUrl;
     private boolean isOpened;
+    private String status;
 }

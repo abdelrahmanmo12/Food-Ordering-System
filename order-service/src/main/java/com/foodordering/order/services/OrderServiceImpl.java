@@ -28,6 +28,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderCreationResponse createOrder(OrderRequest request) {
+        var restaurant = restaurantClient.getById(request.getRestaurantId());
+        validateRestaurant(restaurant, String.valueOf(request.getRestaurantId()));
+
         UserProfileResponse userProfile = userClient.getUserById(request.getCustomerId());
 
         double total = 0;
@@ -77,6 +80,9 @@ public class OrderServiceImpl implements OrderService {
 
         if (cart.getItems() == null || cart.getItems().isEmpty())
             throw new CartNotFoundException(String.valueOf(customerId));
+
+        var restaurant = restaurantClient.getByName(cart.getRestaurantName());
+        validateRestaurant(restaurant, cart.getRestaurantName());
 
         double total = cart.getItems()
                 .stream()
@@ -131,8 +137,7 @@ public class OrderServiceImpl implements OrderService {
             String restaurantName) {
 
         var restaurant = restaurantClient.getByName(restaurantName);
-        if (restaurant == null)
-            throw new RestaurantNotFoundException(restaurantName);
+        validateRestaurant(restaurant, restaurantName);
 
         Cart cart = cartRepo.findByCustomerId(customerId) // ✅
                 .orElse(Cart.builder()
@@ -328,6 +333,15 @@ public class OrderServiceImpl implements OrderService {
                 return "Your order has been cancelled.";
             default:
                 return "Unknown status.";
+        }
+    }
+
+    private void validateRestaurant(RestaurantDTO restaurant, String identifier) {
+        if (restaurant == null) {
+            throw new RestaurantNotFoundException(identifier);
+        }
+        if (!restaurant.isOpened() || !"APPROVED".equals(restaurant.getStatus())) {
+            throw new InvalidOrderStateException("Restaurant is currently closed or not active.");
         }
     }
 }
