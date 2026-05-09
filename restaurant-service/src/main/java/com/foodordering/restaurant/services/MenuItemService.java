@@ -181,7 +181,7 @@ public class MenuItemService {
         }
 
         return menu;
-    }
+    }   
 
     @Transactional(readOnly = true)
     public List<MenuItem> getAllItems() {
@@ -191,7 +191,7 @@ public class MenuItemService {
     @Transactional(readOnly = true)
     public MenuItem getItemById(Long id) {
         return menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with id: " + id));
     }
 
 }

@@ -115,22 +115,7 @@ public class RestaurantController {
         return ResponseEntity.noContent().build();
     }
 
-    private RestaurantDTO convertToDto(Restaurant restaurant) {
-        RestaurantDTO dto = new RestaurantDTO();
-        dto.setId(restaurant.getId());
-        dto.setName(restaurant.getName());
-        dto.setLocation(restaurant.getLocation());
-        dto.setPhone(restaurant.getPhone());
-        dto.setDescription(restaurant.getDescription());
-        dto.setImageUrl(restaurant.getImageUrl());
-        dto.setOpened(restaurant.isOpened());
-        dto.setOwnerId(restaurant.getOwnerId());
-        if (restaurant.getStatus() != null) {
-            dto.setStatus(restaurant.getStatus().name());
-        }
-        return dto;
-    }
-
+    
     @GetMapping("/internal/exists/{id}")
     public ResponseEntity<Boolean> exists(@PathVariable Long id) {
 
@@ -165,5 +150,21 @@ public class RestaurantController {
 
         List<RestaurantDTO> dtos = restaurants.stream().map(this::convertToDto).toList();
         return ResponseEntity.ok(dtos);
+    }
+    
+    private RestaurantDTO convertToDto(Restaurant restaurant) {
+        RestaurantDTO dto = new RestaurantDTO();
+        dto.setId(restaurant.getId());
+        dto.setName(restaurant.getName());
+        dto.setLocation(restaurant.getLocation());
+        dto.setPhone(restaurant.getPhone());
+        dto.setDescription(restaurant.getDescription());
+        dto.setImageUrl(restaurant.getImageUrl());
+        dto.setOpened(restaurant.isOpened());
+        dto.setOwnerId(restaurant.getOwnerId());
+        if (restaurant.getStatus() != null) {
+            dto.setStatus(restaurant.getStatus().name());
+        }
+        return dto;
     }
 }

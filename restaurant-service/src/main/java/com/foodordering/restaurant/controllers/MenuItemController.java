@@ -42,7 +42,7 @@ public class MenuItemController {
         return ResponseEntity.status(201).body(saved);
     }
 
-    @GetMapping("/{restaurantId}")
+    @GetMapping("/{restaurantId}")  
     public ResponseEntity<List<MenuItem>> getMenu(@PathVariable Long restaurantId) {
 
         List<MenuItem> items = menuItemService.getMenuByRestaurant(restaurantId);
