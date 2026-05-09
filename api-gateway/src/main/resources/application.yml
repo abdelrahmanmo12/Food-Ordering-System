@@ -112,8 +112,27 @@ spring:
           filters:
             - AuthenticationFilter
 
+          # ORDER-SERVICE
+        - id: order-service-orders
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - AuthenticationFilter
+            
+        - id: order-service-cart
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - AuthenticationFilter
 
-        
+        - id: delivery-service
+          uri: lb://DELIVERY-SERVICE
+          predicates:
+            - Path=/api/deliveries/**
+          filters:
+            - AuthenticationFilter
 
 eureka:
   instance:

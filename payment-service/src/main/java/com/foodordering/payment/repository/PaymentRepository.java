@@ -16,14 +16,14 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByStripePaymentIntentId(String stripePaymentIntentId);
 
-    List<Payment> findByOrderId(Long orderId);
+    List<Payment> findByOrderId(String orderId);
 
     List<Payment> findByUserId(Long userId);
 
     List<Payment> findByStatus(Payment.PaymentStatus status);
 
     @Query("SELECT p FROM Payment p WHERE p.orderId = :orderId AND p.status = :status")
-    Optional<Payment> findByOrderIdAndStatus(@Param("orderId") Long orderId, @Param("status") Payment.PaymentStatus status);
+    Optional<Payment> findByOrderIdAndStatus(@Param("orderId") String orderId, @Param("status") Payment.PaymentStatus status);
 
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId AND p.status = :status")
     List<Payment> findByUserIdAndStatus(@Param("userId") Long userId, @Param("status") Payment.PaymentStatus status);

@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,10 +13,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
 @Component
+@Slf4j
 public class InternalGatewayAuthenticationFilter extends OncePerRequestFilter {
 
     @Value("${internal.gateway.secret}")
@@ -30,27 +33,26 @@ public class InternalGatewayAuthenticationFilter extends OncePerRequestFilter {
         String role = request.getHeader("X-User-Role");
 
         if (internalGatewaySecret.equals(internalSecret) && userId != null && role != null) {
-            String normalizedRole = normalizeRole(role);
-            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
+            log.info("Authenticating request from Gateway - UserId: {}, Role: {}", userId, role);
+            
+            // Clean up role string (remove brackets, quotes)
+            String cleanRole = role.replace("[", "").replace("]", "").replace("\"", "");
+            String[] roles = cleanRole.split(",");
+            
+            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles)
+                    .map(String::trim)
+                    .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r.toUpperCase(Locale.ROOT))
+                    .map(SimpleGrantedAuthority::new)
+                    .toList();
+
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userId, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.info("Assigned authorities: {}", authorities);
+        } else if (internalSecret != null) {
+            log.warn("Invalid Gateway secret or missing user info");
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private String normalizeRole(String role) {
-        String normalized = role.trim()
-                .replace("[", "")
-                .replace("]", "")
-                .replace("\"", "")
-                .toUpperCase(Locale.ROOT);
-
-        if (normalized.startsWith("ROLE_")) {
-            normalized = normalized.substring("ROLE_".length());
-        }
-
-        return normalized;
     }
 }

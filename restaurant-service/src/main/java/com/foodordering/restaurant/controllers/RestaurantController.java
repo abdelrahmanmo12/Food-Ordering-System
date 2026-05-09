@@ -12,11 +12,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/restaurants")
+@Slf4j
 public class RestaurantController {
 
     @Autowired
@@ -52,9 +54,7 @@ public class RestaurantController {
 
     @PutMapping("/{id}")
     public ResponseEntity<RestaurantDTO> update(@PathVariable Long id, @RequestBody Restaurant restaurant) {
-        System.out.println("=== CONTROLLER ===");
-        System.out.println("THREAD: " + Thread.currentThread().getId());
-        System.out.println("USER: " + UserContext.getUser());
+        log.debug("Update restaurant request - ID: {}, Thread: {}, User: {}", id, Thread.currentThread().getId(), UserContext.getUser());
 
         UserDTO owner = UserContext.getUser();
         if (owner == null) {

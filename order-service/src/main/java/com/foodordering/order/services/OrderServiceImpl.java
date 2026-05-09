@@ -8,15 +8,18 @@ import com.foodordering.order.DTOs.*;
 import com.foodordering.order.entity.*;
 import com.foodordering.order.exceptions.*;
 import com.foodordering.order.aspect.Interfaces.AdminOnly;
-import com.foodordering.order.repositories.*;
 import com.foodordering.order.aspect.Interfaces.CheckOwnerAndAdmin;
 import com.foodordering.order.aspect.Interfaces.OnlySpecificOwner;
+import com.foodordering.order.repositories.OrderRepository;
+import com.foodordering.order.repositories.CartRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,14 +60,14 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerId(request.getCustomerId())
+                .customerId(String.valueOf(request.getCustomerId()))
                 .phone(userProfile.getPhoneNumber())
                 .customerName(userProfile.getFullName())
                 .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
                 .restaurantId(request.getRestaurantId())
                 .items(items)
                 .totalPrice(total)
-                .status(OrderStatus.CREATED)
+                .status(OrderStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -98,14 +101,14 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerId(customerId) // ✅
+                .customerId(String.valueOf(customerId)) // ✅
                 .phone(userProfile.getPhoneNumber())
                 .customerName(userProfile.getFullName())
                 .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
                 .restaurantName(cart.getRestaurantName())
                 .items(cart.getItems())
                 .totalPrice(total)
-                .status(OrderStatus.CREATED)
+                .status(OrderStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -336,8 +339,10 @@ public class OrderServiceImpl implements OrderService {
 
     private String getStatusMessage(OrderStatus status) {
         switch (status) {
-            case CREATED:
-                return "Order received! Waiting for restaurant to confirm.";
+            case PENDING:
+                return "Order received! Waiting for payment confirmation.";
+            case CONFIRMED:
+                return "Order confirmed! Restaurant is preparing your order.";
             case PREPARING:
                 return "Your order is being prepared by the restaurant.";
             case OUT_FOR_DELIVERY:
@@ -348,6 +353,60 @@ public class OrderServiceImpl implements OrderService {
                 return "Your order has been cancelled.";
             default:
                 return "Unknown status.";
+        }
+    }
+
+    @Override
+    public void updateOrderStatus(String orderId, OrderStatus status) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        
+        order.setStatus(status);
+        orderRepo.save(order);
+    }
+
+    @Override
+    public OrderDTO getOrderForPayment(String orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        
+        // Convert Order items to OrderItemDTO
+        List<OrderItemDTO> itemDTOs = order.getItems().stream()
+                .map(item -> OrderItemDTO.builder()
+                        .name(item.getName())
+                        .price(BigDecimal.valueOf(item.getPrice()))
+                        .quantity(item.getQuantity())
+                        .itemId(null) // OrderItem doesn't have itemId field
+                        .build())
+                .collect(Collectors.toList());
+        
+        return OrderDTO.builder()
+                .id(order.getId())
+                .userId(order.getCustomerId())
+                .orderNumber(order.getOrderNumber())
+                .totalAmount(BigDecimal.valueOf(order.getTotalPrice()))
+                .status(convertToOrderDTOStatus(order.getStatus()))
+                .createdAt(order.getCreatedAt())
+                .items(itemDTOs)
+                .build();
+    }
+
+    private OrderDTO.OrderStatus convertToOrderDTOStatus(OrderStatus orderStatus) {
+        switch (orderStatus) {
+            case PENDING:
+                return OrderDTO.OrderStatus.PENDING;
+            case CONFIRMED:
+                return OrderDTO.OrderStatus.CONFIRMED;
+            case PREPARING:
+                return OrderDTO.OrderStatus.PREPARING;
+            case OUT_FOR_DELIVERY:
+                return OrderDTO.OrderStatus.OUT_FOR_DELIVERY;
+            case DELIVERED:
+                return OrderDTO.OrderStatus.DELIVERED;
+            case CANCELLED:
+                return OrderDTO.OrderStatus.CANCELLED;
+            default:
+                throw new IllegalArgumentException("Unknown order status: " + orderStatus);
         }
     }
 

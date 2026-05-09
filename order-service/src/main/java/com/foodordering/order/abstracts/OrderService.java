@@ -22,6 +22,8 @@ public interface OrderService {
 
     List<OrderResponse> getAllOrders(UserDTO user);
     OrderResponse updateOrderStatus(String orderNumber, UserDTO user ,OrderStatus status);
+    void updateOrderStatus(String orderId, OrderStatus status); // For payment service integration
+    OrderDTO getOrderForPayment(String orderId); // For payment service integration
     void deleteOrder(String orderNumber, UserDTO user);
 
     List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId,UserDTO user);

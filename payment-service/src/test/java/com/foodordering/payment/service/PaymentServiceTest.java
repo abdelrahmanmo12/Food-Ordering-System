@@ -1,5 +1,7 @@
 package com.foodordering.payment.service;
 
+import com.foodordering.payment.client.OrderServiceClient;
+import com.foodordering.payment.dto.OrderDTO;
 import com.foodordering.payment.dto.PaymentRequest;
 import com.foodordering.payment.dto.PaymentResponse;
 import com.foodordering.payment.dto.RefundRequest;
@@ -7,6 +9,7 @@ import com.foodordering.payment.entity.Payment;
 import com.foodordering.payment.exception.PaymentProcessingException;
 import com.foodordering.payment.mapper.PaymentMapper;
 import com.foodordering.payment.repository.PaymentRepository;
+import org.springframework.security.core.Authentication;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,21 +36,41 @@ class PaymentServiceTest {
     @Mock
     private StripeService stripeService;
 
+    @Mock
+    private OrderValidationService orderValidationService;
+
+    @Mock
+    private OrderServiceClient orderServiceClient;
+
+    @Mock
+    private Authentication authentication;
+
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
-        paymentService = new PaymentService(paymentRepository, new PaymentMapper(), stripeService);
+        paymentService = new PaymentService(paymentRepository, new PaymentMapper(), stripeService, orderValidationService, orderServiceClient);
     }
 
     @Test
     void createPaymentRecordsCashOnDeliveryWithoutStripe() throws Exception {
-        PaymentRequest request = new PaymentRequest(10L, 20L, BigDecimal.valueOf(150),
+        // Mock authentication to return user ID
+        when(authentication.getName()).thenReturn("20");
+        
+        PaymentRequest request = new PaymentRequest("10", 20L, BigDecimal.valueOf(150),
                 Payment.PaymentMethod.CASH_ON_DELIVERY, "Pay on delivery");
 
+        // Mock order validation
+        OrderDTO mockOrder = OrderDTO.builder()
+                .id("10")
+                .userId("20")
+                .totalAmount(BigDecimal.valueOf(150))
+                .status(OrderDTO.OrderStatus.PENDING)
+                .build();
+        when(orderValidationService.validateOrderForPayment(request, 20L)).thenReturn(mockOrder);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Object response = paymentService.createPayment(request);
+        Object response = paymentService.createPayment(request, authentication);
 
         PaymentResponse paymentResponse = assertInstanceOf(PaymentResponse.class, response);
         assertEquals(Payment.PaymentStatus.PENDING, paymentResponse.getStatus());
@@ -57,10 +80,17 @@ class PaymentServiceTest {
 
     @Test
     void createPaymentIntentRejectsOfflinePaymentMethod() {
-        PaymentRequest request = new PaymentRequest(10L, 20L, BigDecimal.valueOf(150),
+        PaymentRequest request = new PaymentRequest("10", 20L, BigDecimal.valueOf(150),
                 Payment.PaymentMethod.CASH_ON_DELIVERY, "Pay on delivery");
 
-        assertThrows(PaymentProcessingException.class, () -> paymentService.createPaymentIntent(request));
+        OrderDTO mockOrder = OrderDTO.builder()
+                .id("10")
+                .userId("20")
+                .totalAmount(BigDecimal.valueOf(150))
+                .status(OrderDTO.OrderStatus.PENDING)
+                .build();
+
+        assertThrows(PaymentProcessingException.class, () -> paymentService.createPaymentIntent(request, mockOrder));
     }
 
     @Test
