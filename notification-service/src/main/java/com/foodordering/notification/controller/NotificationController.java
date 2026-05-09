@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -14,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.foodordering.notification.Dto.NotificationRequest;
+import com.foodordering.notification.Dto.UserDTO;
 import com.foodordering.notification.model.OrderStatusNotification;
 import com.foodordering.notification.service.NotificationService;
 
@@ -31,13 +31,19 @@ public class NotificationController {
 
     @GetMapping("/my-notifications")
     public ResponseEntity<List<OrderStatusNotification>> getUserNotifications(
-        @RequestHeader("X-User-Id") Long userId
-       ) {
-        return ResponseEntity.ok(service.getUnreadNotifications(userId));
+        @RequestHeader("X-User-Id") Long userId,
+        @RequestHeader(value = "X-User-Role") String role
+    ) {
+        UserDTO user = new UserDTO(String.valueOf(userId), role, null);
+        return ResponseEntity.ok(service.getUnreadNotifications(userId, user));
     }
 
     @PatchMapping("/mark-as-read")
-    public void markAsRead(@RequestHeader("X-User-Id") Long userId) {
-        service.markAllAsRead(userId);
+    public void markAsRead(
+        @RequestHeader("X-User-Id") Long userId,
+        @RequestHeader(value = "X-User-Role") String role
+    ) {
+        UserDTO user = new UserDTO(String.valueOf(userId), role, null);
+        service.markAllAsRead(userId, user);
     }
 }

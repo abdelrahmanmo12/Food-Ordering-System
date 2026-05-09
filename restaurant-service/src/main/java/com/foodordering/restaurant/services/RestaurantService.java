@@ -32,12 +32,14 @@ public class RestaurantService {
         return restaurantRepository.findByStatus(AdminStatus.APPROVED);
     }
 
+    @Transactional(readOnly = true)
     public Restaurant getRestaurantById(Long id) {
         return (Restaurant) restaurantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
 
     @OnlyOwner
+    @Transactional
     public Restaurant addRestaurant(UserDTO owner, Restaurant restaurant) {
         
         try {
@@ -51,6 +53,7 @@ public class RestaurantService {
     }
 
     @OnlySpecificOwner
+    @Transactional
     public Restaurant updateRestaurant(Long id, UserDTO owner, Restaurant updated) {
 
         System.out.println("=== SERVICE ===");
@@ -66,6 +69,7 @@ public class RestaurantService {
     }
 
     @CheckOwnerAndAdmin
+    @Transactional
     public void deleteRestaurant(Long id, UserDTO owner) {
         if (!existsById(id)) {
             throw new ResourceNotFoundException("Restaurant not found");
@@ -109,6 +113,7 @@ public class RestaurantService {
     }
 
     @CheckOwnerAndAdmin
+    @Transactional
     public Restaurant toggleOpeningStatus(Long id, UserDTO owner) {
         Restaurant restaurant = getRestaurantById(id);
 
@@ -121,6 +126,7 @@ public class RestaurantService {
     }
 
     @AdminOnly
+    @Transactional(readOnly = true)
     public List<Restaurant> getAllPendingRestaurants(String role) {
         if (!"ADMIN".equals(role)) {
             throw new UnauthorizedAccessException("Only admins can view pending restaurants");
@@ -131,6 +137,7 @@ public class RestaurantService {
     }
 
     @AdminOnly
+    @Transactional
     public String updateRestaurantStatus(Long id, String role, AdminStatus newStatus) {
         if (!"ADMIN".equals(role)) {
             throw new UnauthorizedAccessException("Only admins can approve restaurants");
@@ -148,6 +155,7 @@ public class RestaurantService {
     }
 
     @OnlySpecificOwner
+    @Transactional
     public String uploadImage(Long id, UserDTO owner, MultipartFile file) {
         Restaurant restaurant = getRestaurantById(id);
 
@@ -162,6 +170,7 @@ public class RestaurantService {
     }
 
     @CheckOwnerAndAdmin
+    @Transactional
     public void deleteImage(Long id, UserDTO admin) {
         
         Restaurant restaurant = getRestaurantById(id);
@@ -172,21 +181,24 @@ public class RestaurantService {
         }
     }
 
+    @Transactional(readOnly = true)
     public boolean existsById(Long id) {
         return restaurantRepository.existsById(id);
     }
 
-    
 
+    @Transactional(readOnly = true)
     public Restaurant findByName(String name) {
         return restaurantRepository.findByName(name)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
 
+    @Transactional(readOnly = true)
     public Restaurant getRestaurantByName(String name) {
         return restaurantRepository.findByName(name)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
+    @Transactional(readOnly = true)
     public List<Restaurant> searchByName(String name) {
         return restaurantRepository.findByNameContainingIgnoreCase(name);
     }

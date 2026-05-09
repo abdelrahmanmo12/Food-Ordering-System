@@ -3,6 +3,7 @@ package com.foodordering.restaurant.controllers;
 import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.MenuItemRequest;
 import com.foodordering.restaurant.dtos.UserDTO;
+import com.foodordering.restaurant.dtos.MenuCategoryResponse;
 import com.foodordering.restaurant.models.MenuCategory;
 import com.foodordering.restaurant.models.MenuItem;
 import com.foodordering.restaurant.services.MenuCategoryService;
@@ -16,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/menu")
@@ -115,23 +117,45 @@ public class MenuItemController {
     }
 
     @PostMapping("/categories/{restaurantId}")
-    public ResponseEntity<MenuCategory> createCategory(@PathVariable Long restaurantId, 
+    public ResponseEntity<MenuCategoryResponse> createCategory(@PathVariable Long restaurantId, 
                                                      @RequestBody MenuCategory category) {
         UserDTO owner = UserContext.getUser();
         MenuCategory saved = menuCategoryService.addCategory(restaurantId, owner, category);
-        return ResponseEntity.status(201).body(saved);
+        return ResponseEntity.status(201).body(new MenuCategoryResponse(
+                saved.getId(), 
+                saved.getName(), 
+                saved.isActive(), 
+                saved.getRestaurant().getId(), 
+                saved.getRestaurant().getName()
+        ));
     }
 
     @GetMapping("/categories/restaurant/{restaurantId}")
-    public ResponseEntity<List<MenuCategory>> getCategoriesByRestaurant(@PathVariable Long restaurantId) {
-        return ResponseEntity.ok(menuCategoryService.getCategoriesByRestaurant(restaurantId));
+    public ResponseEntity<List<MenuCategoryResponse>> getCategoriesByRestaurant(@PathVariable Long restaurantId) {
+        List<MenuCategoryResponse> responses = menuCategoryService.getCategoriesByRestaurant(restaurantId).stream()
+                .map(category -> new MenuCategoryResponse(
+                        category.getId(), 
+                        category.getName(), 
+                        category.isActive(), 
+                        category.getRestaurant().getId(), 
+                        category.getRestaurant().getName()
+                ))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
     }
 
     @PutMapping("/categories/{id}")
-    public ResponseEntity<MenuCategory> updateCategory(@PathVariable Long id, 
+    public ResponseEntity<MenuCategoryResponse> updateCategory(@PathVariable Long id, 
                                                      @RequestBody MenuCategory category) {
         UserDTO owner = UserContext.getUser();
-        return ResponseEntity.ok(menuCategoryService.updateCategory(id, owner, category));
+        MenuCategory updated = menuCategoryService.updateCategory(id, owner, category);
+        return ResponseEntity.ok(new MenuCategoryResponse(
+                updated.getId(), 
+                updated.getName(), 
+                updated.isActive(), 
+                updated.getRestaurant().getId(), 
+                updated.getRestaurant().getName()
+        ));
     }
 
     @DeleteMapping("/categories/{id}")
