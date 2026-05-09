@@ -63,7 +63,7 @@ public class OrderServiceImpl implements OrderService {
                 .customerId(request.getCustomerId())
                 .phone(userProfile.getPhoneNumber())
                 .customerName(userProfile.getFullName())
-                .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
+                .address(request.getAddress() != null && !request.getAddress().trim().isEmpty() ? request.getAddress() : userProfile.getAddress())
                 .restaurantId(request.getRestaurantId())
                 .items(items)
                 .totalPrice(total)
@@ -104,7 +104,7 @@ public class OrderServiceImpl implements OrderService {
                 .customerId(customerId) // ✅
                 .phone(userProfile.getPhoneNumber())
                 .customerName(userProfile.getFullName())
-                .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
+                .address(request.getAddress() != null && !request.getAddress().trim().isEmpty() ? request.getAddress() : userProfile.getAddress())
                 .restaurantName(cart.getRestaurantName())
                 .items(cart.getItems())
                 .totalPrice(total)
