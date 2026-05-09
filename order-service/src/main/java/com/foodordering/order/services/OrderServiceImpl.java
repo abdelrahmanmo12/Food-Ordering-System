@@ -3,6 +3,7 @@ package com.foodordering.order.services;
 import com.foodordering.order.abstracts.OrderService;
 import com.foodordering.order.clients.RestaurantClient;
 import com.foodordering.order.clients.UserClient;
+import com.foodordering.order.clients.NotificationClient;
 import com.foodordering.order.DTOs.*;
 import com.foodordering.order.entity.*;
 import com.foodordering.order.exceptions.*;
@@ -28,6 +29,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepo;
     private final RestaurantClient restaurantClient;
     private final UserClient userClient;
+    private final NotificationClient notificationClient;
 
     @Override
     public OrderCreationResponse createOrder(OrderRequest request) {
@@ -70,6 +72,9 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderRepo.save(order);
+        
+        sendNotificationSafe(order.getCustomerId(), order.getOrderNumber(), getStatusMessage(order.getStatus()));
+        
         return new OrderCreationResponse(order.getId(), "Order placed successfully");
     }
 
@@ -110,6 +115,8 @@ public class OrderServiceImpl implements OrderService {
         orderRepo.save(order);
         cartRepo.deleteByCustomerId(customerId); // ✅ clears cart after checkout
 
+        sendNotificationSafe(order.getCustomerId(), order.getOrderNumber(), getStatusMessage(order.getStatus()));
+
         return map(order);
     }
 
@@ -125,6 +132,7 @@ public class OrderServiceImpl implements OrderService {
     public void cancelOrder(String orderNumber) {
         Order order = orderRepo.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new OrderNotFoundException(orderNumber));
+        
 
         if (order.getStatus() == OrderStatus.DELIVERED)
             throw new InvalidOrderStateException("Cannot cancel a delivered order");
@@ -133,6 +141,8 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         orderRepo.save(order);
+        
+        sendNotificationSafe(order.getCustomerId(), order.getOrderNumber(), getStatusMessage(order.getStatus()));
     }
 
     @Override
@@ -237,6 +247,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepo.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new OrderNotFoundException(orderNumber));
         orderRepo.deleteById(order.getId());
+
+        sendNotificationSafe(order.getCustomerId(), order.getOrderNumber(), "Your order has been deleted by an administrator.");
     }
 
     @Override
@@ -252,6 +264,9 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus(status);
         orderRepo.save(order);
+        
+        sendNotificationSafe(order.getCustomerId(), order.getOrderNumber(), getStatusMessage(status));
+        
         return map(order);
     }
 
@@ -401,6 +416,21 @@ public class OrderServiceImpl implements OrderService {
         }
         if (!restaurant.isOpened() || !"APPROVED".equals(restaurant.getStatus())) {
             throw new InvalidOrderStateException("Restaurant is currently closed or not active.");
+        }
+    }
+
+    private void sendNotificationSafe(Long userId, String orderNumber, String message) {
+        try {
+            notificationClient.sendNotification(
+                    NotificationRequest.builder()
+                            .userId(userId)
+                            .orderNumber(orderNumber)
+                            .message(message)
+                            .build()
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send notification for order " + orderNumber);
+            e.printStackTrace();
         }
     }
 }

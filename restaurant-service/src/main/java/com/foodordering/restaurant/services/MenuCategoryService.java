@@ -10,6 +10,7 @@ import com.foodordering.restaurant.repository.RestaurantRepository;
 import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class MenuCategoryService {
     private RestaurantRepository restaurantRepository;
 
     @OnlySpecificOwner
+    @Transactional
     public MenuCategory addCategory(Long restaurantId, UserDTO owner, MenuCategory category) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
@@ -31,11 +33,13 @@ public class MenuCategoryService {
         return menuCategoryRepository.save(category);
     }
 
+    @Transactional(readOnly = true)
     public List<MenuCategory> getCategoriesByRestaurant(Long restaurantId) {
         return menuCategoryRepository.findByRestaurantId(restaurantId);
     }
 
     @OnlySpecificOwner
+    @Transactional
     public MenuCategory updateCategory(Long id, UserDTO owner, MenuCategory updatedCategory) {
         MenuCategory category = menuCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu category not found"));
@@ -48,6 +52,7 @@ public class MenuCategoryService {
     }
 
     @CheckOwnerAndAdmin
+    @Transactional
     public void deleteCategory(Long id, UserDTO owner) {
         menuCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu category not found"));

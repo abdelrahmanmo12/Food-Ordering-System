@@ -112,11 +112,16 @@ public class UserService {
     @Transactional
     @CheckSameUser
     public void removeFavoriteRestaurant(Long id, UserDTO user, Long restaurantId) {
-
         UserProfile dbUserProfile = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
-        dbUserProfile.getFavRestaurants().removeIf(favId -> favId.equals(restaurantId));
+        boolean exists = dbUserProfile.getFavRestaurants().contains(restaurantId);
+
+        if (!exists) {
+            throw new ResourceNotFoundException("Restaurant not found in your favorites");
+        }
+
+        dbUserProfile.getFavRestaurants().remove(restaurantId);
     }
 
     @Transactional(readOnly = true)

@@ -10,6 +10,7 @@ import com.foodordering.restaurant.repository.RestaurantRepository;
 import com.foodordering.restaurant.exceptions.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -25,6 +26,7 @@ public class OfferService {
     private RestaurantRepository restaurantRepository;
 
     @OnlySpecificOwner
+    @Transactional
     public Offer createOffer(Long restaurantId, UserDTO owner, Offer offer) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
@@ -40,12 +42,14 @@ public class OfferService {
         return offerRepository.save(offer);
     }
 
+    @Transactional(readOnly = true)
     public List<Offer> getAllActiveOffers() {
         Instant now = Instant.now();
         return offerRepository.findByStartDateBeforeAndEndDateAfter(now, now);
     }
 
     @OnlySpecificOwner
+    @Transactional
     public Offer updateOffer(Long id, UserDTO owner, Offer updatedOffer) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));
@@ -70,6 +74,7 @@ public class OfferService {
     }
 
     @CheckOwnerAndAdmin
+    @Transactional
     public void deleteOffer(Long id, UserDTO owner) {
         offerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));
@@ -77,10 +82,12 @@ public class OfferService {
         offerRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public List<Offer> getOffersByRestaurant(Long restaurantId) {
         return offerRepository.findByRestaurantId(restaurantId);
     }
 
+    @Transactional(readOnly = true)
     public Offer getOfferById(Long id) {
         return offerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Offer not found"));

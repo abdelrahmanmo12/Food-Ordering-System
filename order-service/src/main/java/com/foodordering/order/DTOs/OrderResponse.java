@@ -15,5 +15,5 @@ public class OrderResponse {
     private double totalPrice;
     private OrderStatus status;
     private List<OrderItem> items;
-    private String orderNumber;  // ← add this field// ← keep only this one, remove the other
+    private String orderNumber;
 }

@@ -15,6 +15,7 @@ import com.foodordering.restaurant.exceptions.DuplicateResourceException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -39,6 +40,7 @@ public class MenuItemService {
     private MenuCategoryRepository categoryRepository;
 
     @OnlySpecificOwner
+    @Transactional
     public MenuItem addMenuItem(Long restaurantId, UserDTO owner, MenuItemRequest request) {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
@@ -67,11 +69,13 @@ public class MenuItemService {
         return menuItemRepository.save(item);
     }
 
+    @Transactional(readOnly = true)
     public List<MenuItem> getMenuByRestaurant(Long restaurantId) {
         return menuItemRepository.findByRestaurantId(restaurantId);
     }
 
     @OnlySpecificOwner
+    @Transactional
     public MenuItem updateMenuItem(Long id, UserDTO owner, MenuItem updated) {
 
         MenuItem item = menuItemRepository.findById(id)
@@ -82,6 +86,7 @@ public class MenuItemService {
     }
 
     @CheckOwnerAndAdmin
+    @Transactional
     public void deleteMenuItem(Long id, UserDTO owner) {
         menuItemRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
@@ -89,10 +94,12 @@ public class MenuItemService {
         menuItemRepository.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
     public List<MenuItem> getByCategory(String category) {
         return menuItemRepository.findByCategoryName(category);
     }
 
+    @Transactional(readOnly = true)
     public List<MenuItem> getDiscounts() {
         return menuItemRepository.findByDiscountGreaterThan(0);
     }
@@ -123,6 +130,7 @@ public class MenuItemService {
     }
 
     @OnlySpecificOwner
+    @Transactional
     public String uploadImage(Long id, UserDTO owner, MultipartFile file) {
 
         MenuItem item = menuItemRepository.findById(id)
@@ -138,14 +146,17 @@ public class MenuItemService {
 
     }
 
+    @Transactional(readOnly = true)
     public MenuItem getItemByRestaurantAndName(Long restaurantId, String itemName) {
         return menuItemRepository.findByRestaurantIdAndNameIgnoreCase(restaurantId, itemName);
     }
 
+    @Transactional(readOnly = true)
     public MenuItem getItemByRestaurantAndId(Long restaurantId, Long itemId) {
         return menuItemRepository.findByRestaurantIdAndId(restaurantId, itemId);
     }
 
+    @Transactional
     public List<MenuItem> addBulkMenuItems(Long restaurantId, List<MenuItem> items) {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
@@ -156,6 +167,7 @@ public class MenuItemService {
         return menuItemRepository.saveAll(items);
     }
 
+    @Transactional(readOnly = true)
     public Map<String, List<MenuItem>> getMenuGroupedByCategory(Long restaurantId) {
         List<MenuItem> items = menuItemRepository.findByRestaurantId(restaurantId);
 
@@ -169,15 +181,17 @@ public class MenuItemService {
         }
 
         return menu;
-    }
+    }   
 
+    @Transactional(readOnly = true)
     public List<MenuItem> getAllItems() {
         return menuItemRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public MenuItem getItemById(Long id) {
         return menuItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu item not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found with id: " + id));
     }
 
 }
