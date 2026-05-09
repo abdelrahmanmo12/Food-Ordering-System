@@ -60,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerId(String.valueOf(request.getCustomerId()))
+                .customerId(request.getCustomerId())
                 .phone(userProfile.getPhoneNumber())
                 .customerName(userProfile.getFullName())
                 .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
@@ -101,7 +101,7 @@ public class OrderServiceImpl implements OrderService {
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
-                .customerId(String.valueOf(customerId)) // ✅
+                .customerId(customerId) // ✅
                 .phone(userProfile.getPhoneNumber())
                 .customerName(userProfile.getFullName())
                 .address(userProfile.getAddress() != null ? userProfile.getAddress() : request.getAddress())
@@ -115,7 +115,7 @@ public class OrderServiceImpl implements OrderService {
         orderRepo.save(order);
         cartRepo.deleteByCustomerId(customerId); // ✅ clears cart after checkout
 
-        sendNotificationSafe(order.getCustomerId(), order.getOrderNumber(), getStatusMessage(order.getStatus()));
+        sendNotificationSafe(Long.valueOf(order.getCustomerId()), order.getOrderNumber(), getStatusMessage(order.getStatus()));
 
         return map(order);
     }

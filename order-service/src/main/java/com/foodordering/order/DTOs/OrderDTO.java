@@ -16,7 +16,7 @@ import java.util.List;
 public class OrderDTO {
     
     private String id;
-    private String userId;
+    private Long userId;
     private String orderNumber;
     private BigDecimal totalAmount;
     private OrderStatus status;
