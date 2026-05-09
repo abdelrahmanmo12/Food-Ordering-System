@@ -1,4 +1,4 @@
-# Payment Service Fix: Switch to H2 In-Memory DB (No External MySQL)
+له# Payment Service Fix: Switch to H2 In-Memory DB (No External MySQL)
 
 ## Steps:
 - [x] 1. Understand issue: Empty MySQL password causing startup failure.
