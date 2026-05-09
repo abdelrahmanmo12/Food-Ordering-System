@@ -203,4 +203,15 @@ public class RestaurantService {
         return restaurantRepository.findByNameContainingIgnoreCase(name);
     }
 
+    @Transactional(readOnly = true)
+    public List<Restaurant> getRestaurantsByOwner(Long ownerId, UserDTO requester) {
+        
+        if (!"ADMIN".equals(requester.getRole())) {
+            if (!"OWNER".equals(requester.getRole()) || !String.valueOf(ownerId).equals(requester.getId())) {
+                throw new UnauthorizedAccessException("You can only view your own restaurants");
+            }
+        }
+
+        return restaurantRepository.findByOwnerId(ownerId);
+    }
 }

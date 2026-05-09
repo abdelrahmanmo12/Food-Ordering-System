@@ -149,4 +149,21 @@ public class RestaurantController {
     public List<RestaurantDTO> search(@RequestParam String name) {
         return restaurantService.searchByName(name).stream().map(this::convertToDto).toList();
     }
+
+    @GetMapping("/owner/{ownerId}")
+    public ResponseEntity<List<RestaurantDTO>> getRestaurantsByOwner(@PathVariable Long ownerId) {
+        UserDTO requester = UserContext.getUser();
+        if (requester == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        List<Restaurant> restaurants = restaurantService.getRestaurantsByOwner(ownerId, requester);
+
+        if (restaurants == null || restaurants.isEmpty()) {
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
+
+        List<RestaurantDTO> dtos = restaurants.stream().map(this::convertToDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
 }
