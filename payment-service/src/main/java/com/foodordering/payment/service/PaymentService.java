@@ -1,5 +1,8 @@
 package com.foodordering.payment.service;
 
+import com.foodordering.payment.client.OrderServiceClient;
+import com.foodordering.payment.dto.OrderDTO;
+import com.foodordering.payment.dto.OrderStatusUpdateRequest;
 import com.foodordering.payment.dto.PaymentRequest;
 import com.foodordering.payment.dto.PaymentResponse;
 import com.foodordering.payment.dto.RefundRequest;
@@ -12,6 +15,7 @@ import com.foodordering.payment.repository.PaymentRepository;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +32,8 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final StripeService stripeService;
+    private final OrderValidationService orderValidationService;
+    private final OrderServiceClient orderServiceClient;
 
     /**
      * Create a payment using the correct flow for the selected payment method.
@@ -35,9 +41,15 @@ public class PaymentService {
      * transfer are recorded as pending offline/manual payments.
      */
     @Transactional
-    public Object createPayment(PaymentRequest request) {
+    public Object createPayment(PaymentRequest request, Authentication authentication) {
+        // Extract current user ID from authentication
+        Long currentUserId = extractUserId(authentication);
+        
+        // Validate order before proceeding with payment
+        OrderDTO order = orderValidationService.validateOrderForPayment(request, currentUserId);
+        
         if (requiresStripe(request.getPaymentMethod())) {
-            return createPaymentIntent(request);
+            return createPaymentIntent(request, order);
         }
 
         Payment payment = paymentMapper.toEntity(request);
@@ -58,7 +70,7 @@ public class PaymentService {
      * Returns client secret for frontend to complete the payment
      */
     @Transactional
-    public StripePaymentIntentResponse createPaymentIntent(PaymentRequest request) {
+    public StripePaymentIntentResponse createPaymentIntent(PaymentRequest request, OrderDTO order) {
         log.info("Creating Stripe Payment Intent for order: {}, user: {}", request.getOrderId(), request.getUserId());
 
         if (!requiresStripe(request.getPaymentMethod())) {
@@ -176,7 +188,7 @@ public class PaymentService {
         return paymentMapper.toResponse(payment);
     }
 
-    public List<PaymentResponse> getPaymentsByOrderId(Long orderId) {
+    public List<PaymentResponse> getPaymentsByOrderId(String orderId) {
         log.info("Fetching payments for order: {}", orderId);
         return mapPaymentsToResponse(paymentRepository.findByOrderId(orderId));
     }
@@ -206,6 +218,14 @@ public class PaymentService {
 
     private String generatePaymentId() {
         return "PAY-" + UUID.randomUUID();
+    }
+
+    private Long extractUserId(Authentication authentication) {
+        try {
+            return Long.parseLong(authentication.getName());
+        } catch (NumberFormatException e) {
+            throw new PaymentProcessingException("Unable to extract user ID from authentication");
+        }
     }
 
     @Transactional
@@ -273,7 +293,21 @@ public class PaymentService {
         if (newStatus != null && newStatus != payment.getStatus()) {
             payment.setStatus(newStatus);
             paymentRepository.save(payment);
-            log.info("Payment status updated via webhook - PaymentId: {}, NewStatus: {}", payment.getPaymentId(), newStatus);
+
+            log.info("Payment status updated - PaymentId: {}, NewStatus: {}", stripePaymentIntentId, newStatus);
+
+            // Update order status when payment is completed
+            if (newStatus == Payment.PaymentStatus.COMPLETED) {
+                try {
+                    OrderStatusUpdateRequest statusRequest = new OrderStatusUpdateRequest();
+                    statusRequest.setStatus(OrderDTO.OrderStatus.CONFIRMED);
+                    orderServiceClient.updateOrderStatus(payment.getOrderId(), statusRequest);
+                    log.info("Order status updated to CONFIRMED for orderId: {}", payment.getOrderId());
+                } catch (Exception e) {
+                    log.warn("Failed to update order status: {}", e.getMessage());
+                    // Don't fail the payment if order status update fails
+                }
+            }
         }
     }
 

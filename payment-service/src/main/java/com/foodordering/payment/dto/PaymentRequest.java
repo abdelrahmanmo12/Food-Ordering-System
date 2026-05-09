@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public class PaymentRequest {
 
     @NotNull(message = "Order ID is required")
-    private Long orderId;
+    private String orderId;
 
     @NotNull(message = "User ID is required")
     private Long userId;

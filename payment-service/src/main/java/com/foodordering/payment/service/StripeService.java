@@ -43,7 +43,7 @@ public class StripeService {
      * @return Map containing paymentIntentId and clientSecret
      * @throws StripeException if Stripe API call fails
      */
-    public Map<String, String> createPaymentIntent(long amount, String currency, Long orderId, Long userId, String paymentId) throws StripeException {
+    public Map<String, String> createPaymentIntent(long amount, String currency, String orderId, Long userId, String paymentId) throws StripeException {
         initializeStripe();
 
         log.info("Creating Stripe Payment Intent - Amount: {} cents, Currency: {}, OrderId: {}, UserId: {}",

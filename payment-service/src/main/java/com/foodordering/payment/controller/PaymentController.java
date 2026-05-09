@@ -37,17 +37,17 @@ public class PaymentController {
     private String stripeWebhookSecret;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'EMPLOYEE', 'CUSTOMER', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'USER')")
     public ResponseEntity<Object> createPayment(@Valid @RequestBody PaymentRequest request,
                                                 Authentication authentication) {
         log.info("REST request to create payment for order: {}", request.getOrderId());
         paymentAccessService.assertCanAccessUserPayments(request.getUserId(), authentication);
-        Object response = paymentService.createPayment(request);
+        Object response = paymentService.createPayment(request, authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{paymentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'EMPLOYEE', 'CUSTOMER', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'USER')")
     public ResponseEntity<PaymentResponse> getPaymentByPaymentId(@PathVariable String paymentId,
                                                                  Authentication authentication) {
         log.info("REST request to get payment with ID: {}", paymentId);
@@ -57,15 +57,15 @@ public class PaymentController {
     }
 
     @GetMapping("/order/{orderId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'EMPLOYEE')")
-    public ResponseEntity<List<PaymentResponse>> getPaymentsByOrderId(@PathVariable Long orderId) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    public ResponseEntity<List<PaymentResponse>> getPaymentsByOrderId(@PathVariable String orderId) {
         log.info("REST request to get payments for order: {}", orderId);
         List<PaymentResponse> responses = paymentService.getPaymentsByOrderId(orderId);
         return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'EMPLOYEE', 'CUSTOMER', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'USER')")
     public ResponseEntity<List<PaymentResponse>> getPaymentsByUserId(@PathVariable Long userId,
                                                                      Authentication authentication) {
         log.info("REST request to get payments for user: {}", userId);
@@ -83,15 +83,15 @@ public class PaymentController {
     }
 
     @PostMapping("/refund")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
     public ResponseEntity<PaymentResponse> processRefund(@Valid @RequestBody RefundRequest request) {
         log.info("REST request to process refund for payment: {}", request.getPaymentId());
         PaymentResponse response = paymentService.processRefund(request);
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{paymentId}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'EMPLOYEE', 'CUSTOMER', 'USER')")
+    @PatchMapping("/{paymentId}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'USER')")
     public ResponseEntity<PaymentResponse> cancelPayment(@PathVariable String paymentId,
                                                         Authentication authentication) {
         log.info("REST request to cancel payment: {}", paymentId);

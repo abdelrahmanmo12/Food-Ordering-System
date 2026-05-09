@@ -58,7 +58,7 @@ public class UserController {
         return authService.refreshToken(request);
     }
 
-    @PutMapping("/change-password")
+    @PatchMapping("/change-password")
     public ResponseEntity<Map<String, String>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             @RequestHeader("X-User-Id") String userId) {

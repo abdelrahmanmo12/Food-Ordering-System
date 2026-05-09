@@ -22,7 +22,7 @@ public class Order {
     private String id;
 
     private String customerName;
-    private Long customerId;
+    private String customerId;
 
     private String phone;
 

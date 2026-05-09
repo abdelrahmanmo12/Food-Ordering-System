@@ -60,6 +60,21 @@ public class OrderController {
         return ResponseEntity.ok(service.checkout(userId, request));
     }
 
+    // Payment service updates order status after successful payment
+    @PatchMapping("/{orderId}/status")
+    public ResponseEntity<String> updateOrderStatus(
+            @PathVariable String orderId,
+            @RequestBody OrderStatusUpdateRequest request) {
+        service.updateOrderStatus(orderId, request.getStatus());
+        return ResponseEntity.ok("Order status updated successfully");
+    }
+
+    // Payment service integration endpoint
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderDTO> getOrderForPayment(@PathVariable String orderId) {
+        return ResponseEntity.ok(service.getOrderForPayment(orderId));
+    }
+
     // ===== Admin =====
 
     @GetMapping("/admin/all")
@@ -109,8 +124,8 @@ public class OrderController {
         return ResponseEntity.ok(service.getOrdersByRestaurant(restaurantId, user));
     }
 
-    @PatchMapping("/restaurant/{orderNumber}/status") // ✅ PATCH not PUT
-    public ResponseEntity<OrderResponse> updateOrderStatus(
+    @PatchMapping("/restaurant/{orderNumber}/status")
+    public ResponseEntity<OrderResponse> updateRestaurantOrderStatus(
             @RequestHeader(value = "X-User-Id") String userId,
             @RequestHeader(value = "X-User-Role") String role,
             @RequestHeader(value = "X-User-Status", required = true) String userStatus,
