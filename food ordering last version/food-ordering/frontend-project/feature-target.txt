@@ -1,0 +1,19 @@
+1-home page 
+a) 🔍 Sort / Filter إضافي
+
+حاليًا عندك Type filters بس.
+ضيف:
+
+Sort by: ⭐ Rating / ⏱ Delivery time / 💸 Price
+زر صغير dropdown جنب search
+
+b)🗺️ View Switch (مهم جدًا)
+
+خلي المستخدم يختار:
+
+Grid view (اللي عندك)
+Map view 🗺️ (even placeholder)
+
+ده بيخلي المشروع “delivery app real”
+
+c)

@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test Promo Helper",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"test-promo.js"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

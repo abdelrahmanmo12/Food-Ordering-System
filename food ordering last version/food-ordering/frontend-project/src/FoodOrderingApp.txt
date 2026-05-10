@@ -1,0 +1,1177 @@
+import { useState, useEffect, createContext, useContext, useRef } from "react";
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #111010;
+    --bg2:       #1a1917;
+    --bg3:       #242220;
+    --surface:   #2c2a27;
+    --border:    #3a3835;
+    --amber:     #f5a623;
+    --amber-dim: #c47d0e;
+    --amber-glow:#f5a62322;
+    --red:       #e8443a;
+    --green:     #4caf7d;
+    --text:      #f0ece4;
+    --text2:     #a09b92;
+    --text3:     #6b6660;
+    --white:     #ffffff;
+    --radius:    12px;
+    --radius-lg: 20px;
+    --shadow:    0 8px 32px rgba(0,0,0,0.5);
+    --shadow-amber: 0 0 40px rgba(245,166,35,0.15);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideRight {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  @keyframes badgePop {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  @keyframes toastSlide {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
+  }
+
+  .fade-up  { animation: fadeUp  0.5s ease both; }
+  .fade-in  { animation: fadeIn  0.4s ease both; }
+
+  /* Utility */
+  .mono { font-family: 'DM Mono', monospace; }
+`;
+
+// ─── MOCK DATA ─────────────────────────────────────────────────────────────────
+const RESTAURANTS = [
+  {
+    id: 1, name: "Cairo Grill House", cuisine: "Egyptian", rating: 4.8, deliveryTime: "25–35", minOrder: 80,
+    image: "/imgs/cairo-grill.png", coverColor: "#3d1a00", isOpen: true, badge: "Popular",
+    description: "Authentic Egyptian street food elevated to restaurant quality.",
+    items: [
+      { id: 101, name: "Koshary Deluxe",     price: 55,  category: "Mains",   Image: "/imgs/Koshary Deluxe.png", desc: "Lentils, rice, pasta with crispy onions & spiced tomato sauce" },
+      { id: 102, name: "Hawawshi",           price: 75,  category: "Mains",   Image: "/imgs/Hawawshi.png", desc: "Spiced minced meat baked in crispy bread" },
+      { id: 103, name: "Ful Medames Bowl",   price: 45,  category: "Mains",   Image: "/imgs/Ful Medames Bowl.png", desc: "Slow-cooked fava beans with olive oil & lemon" },
+      { id: 104, name: "Baladi Salad",       price: 40,  category: "Salads",  Image: "/imgs/Baladi Salad.png", desc: "Fresh tomatoes, cucumber, herbs & tahini" },
+      { id: 105, name: "Ayran",              price: 25,  category: "Drinks",  Image: "/imgs/Ayran.png", desc: "Chilled salted yogurt drink" },
+      { id: 106, name: "Om Ali",             price: 60,  category: "Desserts",Image: "/imgs/Om Ali.png", desc: "Classic Egyptian bread pudding with cream & nuts" },
+    ]
+  },
+  {
+    id: 2, name: "Burger Republic", cuisine: "American", rating: 4.6, deliveryTime: "20–30", minOrder: 60,
+    image: "/imgs/burger-republic.png", coverColor: "#1a0a00", isOpen: true, badge: "New",
+    description: "Smash-style burgers crafted with premium Angus beef.",
+    items: [
+      { id: 201, name: "Classic Smash",      price: 90,  category: "Burgers", Image: "/imgs/Classic Smash.png", desc: "Double smash patty, American cheese, pickles, special sauce" },
+      { id: 202, name: "BBQ Ranch Melt",     price: 105, category: "Burgers", Image: "/imgs/BBQ Ranch Melt.png", desc: "Bacon, cheddar, caramelized onions, BBQ ranch" },
+      { id: 203, name: "Crispy Chicken",     price: 85,  category: "Burgers", Image: "/imgs/Crispy Chicken.png", desc: "Southern-fried chicken thigh, coleslaw, hot honey" },
+      { id: 204, name: "Loaded Fries",       price: 55,  category: "Sides",   Image: "/imgs/Loaded Fries.png", desc: "Crispy fries topped with cheese sauce & jalapeños" },
+      { id: 205, name: "Onion Rings",        price: 45,  category: "Sides",   Image: "/imgs/Onion Rings.png", desc: "Beer-battered, golden, with chipotle mayo" },
+      { id: 206, name: "Milkshake",          price: 65,  category: "Drinks",  Image: "/imgs/Milkshake.png", desc: "Thick shake: chocolate, vanilla, or strawberry" },
+    ]
+  },
+  {
+    id: 3, name: "Sakura Sushi", cuisine: "Japanese", rating: 4.9, deliveryTime: "30–45", minOrder: 120,
+    image: "/imgs/sakura-sushi.png", coverColor: "#001a0e", isOpen: true, badge: "Top Rated",
+    description: "Edo-style sushi with sustainably sourced fish.",
+    items: [
+      { id: 301, name: "Salmon Nigiri (2pc)", price: 85,  category: "Nigiri",  Image: "/imgs/Salmon Nigiri (2pc).png", desc: "Fresh Atlantic salmon over seasoned sushi rice" },
+      { id: 302, name: "Dragon Roll",         price: 145, category: "Rolls",   Image: "/imgs/Dragon Roll.png", desc: "Shrimp tempura inside, avocado on top" },
+      { id: 303, name: "Spicy Tuna Roll",     price: 120, category: "Rolls",   Image: "/imgs/Spicy Tuna Roll.png", desc: "Diced tuna, cucumber, spicy mayo, sriracha" },
+      { id: 304, name: "Edamame",             price: 40,  category: "Starters",Image: "/imgs/Edamame.png", desc: "Steamed & salted young soybeans" },
+      { id: 305, name: "Miso Soup",           price: 30,  category: "Starters",Image: "/imgs/Miso Soup.png", desc: "Tofu, wakame seaweed, green onion in dashi broth" },
+      { id: 306, name: "Matcha Ice Cream",    price: 50,  category: "Desserts",Image: "/imgs/Matcha Ice Cream.png", desc: "House-made with ceremonial grade matcha" },
+    ]
+  },
+  {
+    id: 4, name: "Pizza Palazzo", cuisine: "Italian", rating: 4.5, deliveryTime: "25–40", minOrder: 70,
+    image: "/imgs/pizza-palazzo.png", coverColor: "#1a001a", isOpen: false, badge: null,
+    description: "Neapolitan-style pizzas baked in a wood-fired oven at 450°C.",
+    items: [
+      { id: 401, name: "Margherita Verace",  price: 95,  category: "Pizzas",  Image: "/imgs/Margherita Verace.png", desc: "San Marzano tomato, fior di latte, fresh basil, EVOO" },
+      { id: 402, name: "Diavola",            price: 115, category: "Pizzas",  Image: "/imgs/Diavola.png", desc: "Spicy Calabrian salami, smoked mozzarella, chili oil" },
+      { id: 403, name: "Quattro Formaggi",   price: 125, category: "Pizzas",  Image: "/imgs/Quattro Formaggi.png", desc: "Mozzarella, gorgonzola, pecorino, ricotta" },
+      { id: 404, name: "Arancini",           price: 60,  category: "Starters",Image: "/imgs/Arancini.png", desc: "Crispy rice balls stuffed with ragù & peas" },
+      { id: 405, name: "Tiramisu",           price: 70,  category: "Desserts",Image: "/imgs/Tiramisu.png", desc: "Classic with savoiardi, mascarpone & espresso" },
+      { id: 406, name: "San Pellegrino",     price: 30,  category: "Drinks",  Image: "/imgs/San Pellegrino.png", desc: "Sparkling mineral water, 500ml" },
+    ]
+  },
+];
+
+const STATUS_FLOW = ["Placed", "Confirmed", "Preparing", "On the way", "Delivered"];
+const STATUS_COLORS = {
+  Placed: "#6b6660", Confirmed: "#5b8dd9", Preparing: "#f5a623",
+  "On the way": "#9b59b6", Delivered: "#4caf7d"
+};
+const STATUS_EMOJI = {
+  Placed: "📋", Confirmed: "✅", Preparing: "👨‍🍳", "On the way": "🚴", Delivered: "🏠"
+};
+
+// ─── CONTEXT ──────────────────────────────────────────────────────────────────
+const AppCtx = createContext();
+
+function AppProvider({ children }) {
+  const [user, setUser]       = useState(null);
+  const [role, setRole]       = useState("customer");
+  const [cart, setCart]       = useState([]);
+  const [orders, setOrders]   = useState([]);
+  const [toast, setToast]     = useState(null);
+  const [page, setPage]       = useState("home");
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [activeOrder, setActiveOrder] = useState(null);
+  const toastTimer = useRef(null);
+
+  const showToast = (msg, type = "success") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, type });
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  };
+
+  const login = (email, password, selectedRole) => {
+    if (!email || !password) return false;
+    setUser({ email, name: email.split("@")[0], role: selectedRole });
+    setRole(selectedRole);
+    showToast(`Welcome back! 👋`);
+    setPage("home");
+    return true;
+  };
+
+  const logout = () => {
+    setUser(null); setCart([]); setRole("customer");
+    setPage("home"); showToast("Logged out successfully");
+  };
+
+  const addToCart = (restaurantId, item) => {
+    const rest = RESTAURANTS.find(r => r.id === restaurantId);
+    if (cart.length > 0 && cart[0].restaurantId !== restaurantId) {
+      if (!window.confirm("Replace your current cart from another restaurant?")) return;
+      setCart([]);
+    }
+    setCart(prev => {
+      const existing = prev.find(c => c.id === item.id);
+      if (existing) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
+      return [...prev, { ...item, restaurantId, restaurantName: rest.name, qty: 1 }];
+    });
+    showToast(`${item.name} added to cart 🛒`);
+  };
+
+  const removeFromCart = (itemId) => setCart(prev => prev.filter(c => c.id !== itemId));
+  const updateQty = (itemId, delta) => setCart(prev =>
+    prev.map(c => c.id === itemId ? { ...c, qty: Math.max(1, c.qty + delta) } : c)
+  );
+
+  const cartTotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const cartCount = cart.reduce((s, c) => s + c.qty, 0);
+
+  const placeOrder = () => {
+    if (!user) { setPage("auth"); return; }
+    if (cart.length === 0) return;
+    const order = {
+      id: `ORD-${Date.now().toString(36).toUpperCase()}`,
+      items: [...cart],
+      total: cartTotal,
+      restaurantName: cart[0].restaurantName,
+      restaurantId: cart[0].restaurantId,
+      status: "Placed",
+      statusIndex: 0,
+      placedAt: new Date().toLocaleTimeString(),
+    };
+    setOrders(prev => [order, ...prev]);
+    setActiveOrder(order);
+    setCart([]);
+    setPage("tracking");
+    showToast("Order placed! 🎉 Tracking live.");
+
+    // Simulate status progression
+    let idx = 0;
+    const interval = setInterval(() => {
+      idx++;
+      if (idx >= STATUS_FLOW.length) { clearInterval(interval); return; }
+      setOrders(prev => prev.map(o =>
+        o.id === order.id ? { ...o, status: STATUS_FLOW[idx], statusIndex: idx } : o
+      ));
+      setActiveOrder(prev => prev && prev.id === order.id
+        ? { ...prev, status: STATUS_FLOW[idx], statusIndex: idx } : prev
+      );
+    }, 5000);
+  };
+
+  return (
+    <AppCtx.Provider value={{
+      user, role, cart, orders, toast, page, selectedRestaurant, activeOrder,
+      setPage, setSelectedRestaurant, setActiveOrder,
+      login, logout, addToCart, removeFromCart, updateQty,
+      cartTotal, cartCount, placeOrder, showToast
+    }}>
+      {children}
+    </AppCtx.Provider>
+  );
+}
+
+const useApp = () => useContext(AppCtx);
+
+// ─── COMPONENTS ───────────────────────────────────────────────────────────────
+
+function Toast() {
+  const { toast } = useApp();
+  if (!toast) return null;
+  const colors = { success: "var(--green)", error: "var(--red)", info: "var(--amber)" };
+  return (
+    <div style={{
+      position: "fixed", top: 24, right: 24, zIndex: 9999,
+      background: "var(--bg3)", border: `1px solid ${colors[toast.type] || colors.success}`,
+      color: "var(--text)", padding: "14px 20px", borderRadius: "var(--radius)",
+      boxShadow: "var(--shadow)", maxWidth: 320, fontSize: 14, fontWeight: 500,
+      animation: "toastSlide 0.3s ease",
+      borderLeft: `4px solid ${colors[toast.type] || colors.success}`
+    }}>
+      {toast.msg}
+    </div>
+  );
+}
+
+function Badge({ children, color = "var(--amber)", style = {} }) {
+  return (
+    <span style={{
+      background: `${color}22`, color, border: `1px solid ${color}44`,
+      borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600,
+      letterSpacing: "0.05em", textTransform: "uppercase", ...style
+    }}>{children}</span>
+  );
+}
+
+function Btn({ children, onClick, variant = "primary", size = "md", style = {}, disabled }) {
+  const base = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+    border: "none", cursor: disabled ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif",
+    fontWeight: 600, transition: "all 0.2s ease", borderRadius: "var(--radius)",
+    opacity: disabled ? 0.5 : 1,
+  };
+  const sizes = { sm: { padding: "8px 16px", fontSize: 13 }, md: { padding: "12px 22px", fontSize: 15 }, lg: { padding: "16px 32px", fontSize: 16 } };
+  const variants = {
+    primary:  { background: "var(--amber)", color: "#1a1200" },
+    ghost:    { background: "transparent", color: "var(--text2)", border: "1px solid var(--border)" },
+    danger:   { background: "var(--red)", color: "#fff" },
+    subtle:   { background: "var(--bg3)", color: "var(--text)" },
+  };
+  return (
+    <button onClick={disabled ? null : onClick} style={{ ...base, ...sizes[size], ...variants[variant], ...style }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.filter = "brightness(1.1)"; }}
+      onMouseLeave={e => { e.currentTarget.style.filter = ""; }}>
+      {children}
+    </button>
+  );
+}
+
+function Input({ label, type = "text", value, onChange, placeholder, style = {} }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {label && <label style={{ fontSize: 13, color: "var(--text2)", fontWeight: 500 }}>{label}</label>}
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{
+          background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+          color: "var(--text)", padding: "12px 16px", fontSize: 15, fontFamily: "'DM Sans', sans-serif",
+          outline: "none", transition: "border-color 0.2s", width: "100%", ...style
+        }}
+        onFocus={e => e.target.style.borderColor = "var(--amber)"}
+        onBlur={e => e.target.style.borderColor = "var(--border)"}
+      />
+    </div>
+  );
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────────────
+function Navbar() {
+  const { user, cart, cartCount, page, setPage, logout, role } = useApp();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = [
+    { id: "home", label: "Restaurants" },
+    { id: "orders", label: "My Orders" },
+    ...(role === "admin" ? [{ id: "admin", label: "Admin" }] : []),
+    ...(role === "owner" ? [{ id: "owner", label: "My Restaurant" }] : []),
+  ];
+
+  return (
+    <nav style={{
+      position: "sticky", top: 0, zIndex: 100,
+      background: "rgba(17,16,16,0.92)", backdropFilter: "blur(20px)",
+      borderBottom: "1px solid var(--border)", padding: "0 24px",
+    }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", height: 64, gap: 32 }}>
+        {/* Logo */}
+        <div onClick={() => setPage("home")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 28 }}>🍽️</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "var(--amber)" }}>
+            Mazboot
+          </span>
+        </div>
+
+        {/* Nav links */}
+        <div style={{ display: "flex", gap: 4, flex: 1 }}>
+          {navItems.map(item => (
+            <button key={item.id} onClick={() => setPage(item.id)} style={{
+              background: page === item.id ? "var(--amber-glow)" : "transparent",
+              border: "none", color: page === item.id ? "var(--amber)" : "var(--text2)",
+              padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500,
+              fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s",
+            }}>{item.label}</button>
+          ))}
+        </div>
+
+        {/* Right side */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Cart */}
+          <button onClick={() => setPage("cart")} style={{
+            position: "relative", background: "var(--bg3)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: "10px 16px", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 8, color: "var(--text)", fontSize: 14,
+            fontFamily: "'DM Sans', sans-serif", fontWeight: 500, transition: "all 0.2s",
+          }}>
+            🛒
+            {cartCount > 0 && (
+              <span style={{
+                position: "absolute", top: -6, right: -6, background: "var(--amber)", color: "#1a1200",
+                borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: 11, fontWeight: 700, animation: "badgePop 0.3s ease",
+              }}>{cartCount}</span>
+            )}
+            Cart
+          </button>
+
+          {/* User */}
+          {user ? (
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setMenuOpen(!menuOpen)} style={{
+                background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+                padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
+                color: "var(--text)", fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
+              }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", color: "#1a1200", fontWeight: 700, fontSize: 12 }}>
+                  {user.name[0].toUpperCase()}
+                </div>
+                {user.name}
+                <Badge color={role === "admin" ? "var(--red)" : role === "owner" ? "#9b59b6" : "var(--green)"}>
+                  {role}
+                </Badge>
+              </button>
+              {menuOpen && (
+                <div style={{
+                  position: "absolute", right: 0, top: "calc(100% + 8px)", background: "var(--bg3)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden",
+                  minWidth: 160, boxShadow: "var(--shadow)", animation: "fadeIn 0.15s ease",
+                }}>
+                  <div style={{ padding: "8px 16px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" }}>
+                    {user.email}
+                  </div>
+                  <button onClick={() => { logout(); setMenuOpen(false); }} style={{
+                    width: "100%", padding: "12px 16px", background: "none", border: "none",
+                    color: "var(--red)", cursor: "pointer", textAlign: "left", fontSize: 14,
+                    fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                  }}>Sign out</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Btn onClick={() => setPage("auth")} size="sm">Sign in</Btn>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ─── HOME / RESTAURANT LIST ────────────────────────────────────────────────────
+function Home() {
+  const { setPage, setSelectedRestaurant } = useApp();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All");
+
+  const cuisines = ["All", ...new Set(RESTAURANTS.map(r => r.cuisine))];
+  const filtered = RESTAURANTS.filter(r =>
+    r.name.toLowerCase().includes(search.toLowerCase()) &&
+    (filter === "All" || r.cuisine === filter)
+  );
+
+  return (
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }}>
+      {/* Hero */}
+      <div style={{ textAlign: "center", marginBottom: 56, animation: "fadeUp 0.6s ease" }}>
+        <p style={{ color: "var(--amber)", fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.15em", marginBottom: 12, textTransform: "uppercase" }}>
+          Order in Cairo
+        </p>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(42px, 6vw, 72px)", fontWeight: 900, lineHeight: 1.1, marginBottom: 16 }}>
+          Great food,<br /><em style={{ color: "var(--amber)" }}>delivered fast.</em>
+        </h1>
+        <p style={{ color: "var(--text2)", fontSize: 17, maxWidth: 480, margin: "0 auto" }}>
+          Browse top restaurants and get fresh meals to your door.
+        </p>
+      </div>
+
+      {/* Search + Filter */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 40, flexWrap: "wrap", animation: "fadeUp 0.7s ease" }}>
+        <div style={{ flex: 1, minWidth: 240, position: "relative" }}>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: "var(--text3)" }}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search restaurants..."
+            style={{
+              width: "100%", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              color: "var(--text)", padding: "14px 16px 14px 42px", fontSize: 15, fontFamily: "'DM Sans', sans-serif",
+              outline: "none", transition: "border-color 0.2s",
+            }}
+            onFocus={e => e.target.style.borderColor = "var(--amber)"}
+            onBlur={e => e.target.style.borderColor = "var(--border)"}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {cuisines.map(c => (
+            <button key={c} onClick={() => setFilter(c)} style={{
+              padding: "10px 16px", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s",
+              background: filter === c ? "var(--amber)" : "var(--bg2)",
+              color: filter === c ? "#1a1200" : "var(--text2)",
+              border: filter === c ? "1px solid var(--amber)" : "1px solid var(--border)",
+            }}>{c}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats bar */}
+      <div style={{
+        display: "flex", gap: 24, marginBottom: 40, padding: "16px 24px",
+        background: "var(--bg2)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
+        animation: "fadeUp 0.8s ease",
+      }}>
+        {[
+          { label: "Restaurants", value: RESTAURANTS.length },
+          { label: "Open now", value: RESTAURANTS.filter(r => r.isOpen).length },
+          { label: "Avg delivery", value: "28 min" },
+          { label: "Happy customers", value: "12K+" },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "'Playfair Display', serif", color: "var(--amber)" }}>{s.value}</div>
+            <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Restaurant grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 24 }}>
+        {filtered.map((r, i) => (
+          <RestaurantCard key={r.id} restaurant={r} delay={i * 0.08}
+            onClick={() => { setSelectedRestaurant(r); setPage("menu"); }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RestaurantCard({ restaurant: r, onClick, delay }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div onClick={onClick}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{
+        background: "var(--bg2)", border: `1px solid ${hovered ? "var(--amber)" : "var(--border)"}`,
+        borderRadius: "var(--radius-lg)", overflow: "hidden", cursor: r.isOpen ? "pointer" : "not-allowed",
+        transition: "all 0.3s ease", transform: hovered && r.isOpen ? "translateY(-4px)" : "none",
+        boxShadow: hovered && r.isOpen ? "var(--shadow-amber)" : "none",
+        opacity: r.isOpen ? 1 : 0.6, animation: `fadeUp 0.5s ${delay}s ease both`,
+      }}>
+      {/* Cover */}
+      <div style={{
+        height: 140, background: `linear-gradient(135deg, ${r.coverColor} 0%, #1a1917 100%)`,
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64,
+        position: "relative",
+      }}>
+        <img src={r.image} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {r.badge && (
+          <span style={{
+            position: "absolute", top: 12, left: 12,
+            background: "var(--amber)", color: "#1a1200", borderRadius: 6,
+            padding: "3px 10px", fontSize: 11, fontWeight: 700,
+          }}>{r.badge}</span>
+        )}
+        {!r.isOpen && (
+          <div style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14, fontWeight: 600, color: "var(--text2)", letterSpacing: "0.1em",
+          }}>CLOSED</div>
+        )}
+      </div>
+      {/* Info */}
+      <div style={{ padding: "16px 20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700 }}>{r.name}</h3>
+          <span style={{ color: "var(--amber)", fontWeight: 700, fontSize: 14 }}>⭐ {r.rating}</span>
+        </div>
+        <p style={{ color: "var(--text3)", fontSize: 12, marginBottom: 12 }}>{r.description}</p>
+        <div style={{ display: "flex", gap: 12, fontSize: 12, color: "var(--text2)" }}>
+          <span>🍽️ {r.cuisine}</span>
+          <span>⏱️ {r.deliveryTime} min</span>
+          <span>💳 Min {r.minOrder} EGP</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MENU ─────────────────────────────────────────────────────────────────────
+function Menu() {
+  const { selectedRestaurant: r, addToCart, setPage, cart } = useApp();
+  const [activeCategory, setActiveCategory] = useState("All");
+  if (!r) return null;
+
+  const categories = ["All", ...new Set(r.items.map(i => i.category))];
+  const filtered = r.items.filter(i => activeCategory === "All" || i.category === activeCategory);
+  const cartItems = cart.reduce((acc, c) => ({ ...acc, [c.id]: c.qty }), {});
+
+  return (
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }}>
+      {/* Back + header */}
+      <div style={{ animation: "fadeUp 0.4s ease" }}>
+        <button onClick={() => setPage("home")} style={{
+          background: "none", border: "none", color: "var(--amber)", cursor: "pointer",
+          fontFamily: "'DM Sans', sans-serif", fontSize: 14, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 6,
+        }}>← Back to Restaurants</button>
+
+        <div style={{
+          background: `linear-gradient(135deg, ${r.coverColor} 0%, var(--bg2) 100%)`,
+          borderRadius: "var(--radius-lg)", padding: "32px 36px", marginBottom: 36,
+          border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 24,
+        }}>
+          <span style={{ fontSize: 72 }}><img src={r.image} alt={r.name} style={{ width: "40%", height: "40%", objectFit: "cover" }} /></span>
+          <div>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 900, marginBottom: 8 }}>{r.name}</h1>
+            <div style={{ display: "flex", gap: 16, fontSize: 14, color: "var(--text2)", flexWrap: "wrap" }}>
+              <span>⭐ {r.rating}</span>
+              <span>⏱️ {r.deliveryTime} min</span>
+              <span>🍽️ {r.cuisine}</span>
+              <span>💳 Min {r.minOrder} EGP</span>
+            </div>
+            <p style={{ marginTop: 10, color: "var(--text2)", fontSize: 14 }}>{r.description}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Category filter */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 32, flexWrap: "wrap" }}>
+        {categories.map(cat => (
+          <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+            padding: "8px 18px", borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s",
+            background: activeCategory === cat ? "var(--amber)" : "var(--bg2)",
+            color: activeCategory === cat ? "#1a1200" : "var(--text2)",
+            border: activeCategory === cat ? "1px solid var(--amber)" : "1px solid var(--border)",
+          }}>{cat}</button>
+        ))}
+      </div>
+
+      {/* Items */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+        {filtered.map((item, i) => (
+          <MenuItem key={item.id} item={item} qtyInCart={cartItems[item.id] || 0}
+            onAdd={() => addToCart(r.id, item)}
+            delay={i * 0.05}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MenuItem({ item, qtyInCart, onAdd, delay }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{
+      background: "var(--bg2)", border: `1px solid ${hovered ? "var(--amber)" : "var(--border)"}`,
+      borderRadius: "var(--radius)", padding: "18px 20px",
+      display: "flex", gap: 14, alignItems: "flex-start",
+      transition: "all 0.2s", animation: `fadeUp 0.4s ${delay}s ease both`,
+    }}>
+      <span style={{ fontSize: 40, lineHeight: 1 }}>{item.Image ? (
+  <img
+    src={item.Image}
+    alt={item.name}
+    style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }}
+  />
+) : (
+  <span style={{ fontSize: 40 }}>{item.emoji}</span>
+)}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+          <h4 style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.3 }}>{item.name}</h4>
+          <span style={{ color: "var(--amber)", fontWeight: 700, fontSize: 15, whiteSpace: "nowrap", marginLeft: 8 }}>{item.price} EGP</span>
+        </div>
+        <p style={{ fontSize: 13, color: "var(--text3)", marginBottom: 12, lineHeight: 1.5 }}>{item.desc}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Badge color="var(--text3)" style={{ fontSize: 10 }}>{item.category}</Badge>
+          <Btn size="sm" onClick={onAdd} style={{ padding: "6px 14px", fontSize: 13 }}>
+            {qtyInCart > 0 ? `+1 (${qtyInCart})` : "+ Add"}
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CART ─────────────────────────────────────────────────────────────────────
+function Cart() {
+  const { cart, cartTotal, removeFromCart, updateQty, placeOrder, setPage, user } = useApp();
+
+  if (cart.length === 0) return (
+    <div style={{ maxWidth: 600, margin: "80px auto", padding: "0 24px", textAlign: "center", animation: "fadeUp 0.5s ease" }}>
+      <div style={{ fontSize: 80, marginBottom: 20 }}>🛒</div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 12 }}>Your cart is empty</h2>
+      <p style={{ color: "var(--text2)", marginBottom: 28 }}>Browse our restaurants and add some delicious food!</p>
+      <Btn onClick={() => setPage("home")}>Explore Restaurants</Btn>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 680, margin: "0 auto", padding: "40px 24px", animation: "fadeUp 0.5s ease" }}>
+      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, marginBottom: 8 }}>Your Cart</h1>
+      <p style={{ color: "var(--text2)", marginBottom: 32 }}>From {cart[0].restaurantName}</p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 }}>
+        {cart.map(item => (
+          <div key={item.id} style={{
+            background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+            padding: "16px 20px", display: "flex", alignItems: "center", gap: 16,
+          }}>
+            <span style={{ fontSize: 32 }}>{item.Image ? (
+  <img
+    src={item.Image}
+    alt={item.name}
+    style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }}
+  />
+) : (
+  <span style={{ fontSize: 40 }}>{item.emoji}</span>
+)}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
+              <div style={{ fontSize: 13, color: "var(--text2)" }}>{item.price} EGP × {item.qty} = <strong style={{ color: "var(--amber)" }}>{item.price * item.qty} EGP</strong></div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => updateQty(item.id, -1)} style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16 }}>−</button>
+              <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{item.qty}</span>
+              <button onClick={() => updateQty(item.id, 1)} style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text)", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 16 }}>+</button>
+              <button onClick={() => removeFromCart(item.id)} style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 16, marginLeft: 4 }}>✕</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Summary */}
+      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, color: "var(--text2)", fontSize: 14 }}>
+          <span>Subtotal</span><span>{cartTotal} EGP</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, color: "var(--text2)", fontSize: 14 }}>
+          <span>Delivery fee</span><span style={{ color: "var(--green)" }}>Free 🎉</span>
+        </div>
+        <div style={{ height: 1, background: "var(--border)", margin: "16px 0" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 18 }}>
+          <span>Total</span><span style={{ color: "var(--amber)" }}>{cartTotal} EGP</span>
+        </div>
+      </div>
+
+      <Btn onClick={placeOrder} size="lg" style={{ width: "100%" }}>
+        {user ? "🚀 Place Order" : "🔐 Sign in to Order"}
+      </Btn>
+    </div>
+  );
+}
+
+// ─── ORDER TRACKING ────────────────────────────────────────────────────────────
+function Tracking() {
+  const { orders, activeOrder, setActiveOrder, setPage } = useApp();
+  const selected = activeOrder || orders[0];
+
+  if (!selected) return (
+    <div style={{ maxWidth: 600, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
+      <div style={{ fontSize: 80, marginBottom: 20 }}>📦</div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 12 }}>No active orders</h2>
+      <Btn onClick={() => setPage("home")}>Order Now</Btn>
+    </div>
+  );
+
+  const si = selected.statusIndex || STATUS_FLOW.indexOf(selected.status);
+
+  return (
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: "40px 24px", animation: "fadeUp 0.5s ease" }}>
+      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, marginBottom: 4 }}>Live Tracking</h1>
+      <p style={{ color: "var(--text2)", marginBottom: 32 }}>Order {selected.id} · {selected.restaurantName}</p>
+
+      {/* Status card */}
+      <div style={{
+        background: "var(--bg2)", border: `2px solid ${STATUS_COLORS[selected.status]}`,
+        borderRadius: "var(--radius-lg)", padding: "28px 32px", marginBottom: 32,
+        boxShadow: `0 0 40px ${STATUS_COLORS[selected.status]}22`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+          <span style={{ fontSize: 48 }}>{STATUS_EMOJI[selected.status]}</span>
+          <div>
+            <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 4 }}>Current status</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: STATUS_COLORS[selected.status], fontFamily: "'Playfair Display', serif" }}>
+              {selected.status}
+            </div>
+          </div>
+          {selected.status !== "Delivered" && (
+            <div style={{ marginLeft: "auto", width: 20, height: 20, borderRadius: "50%", border: `3px solid ${STATUS_COLORS[selected.status]}`, borderTopColor: "transparent", animation: "spin 1s linear infinite" }} />
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            {STATUS_FLOW.map((s, i) => (
+              <div key={s} style={{ textAlign: "center", flex: 1 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: "50%", margin: "0 auto 6px",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+                  background: i <= si ? STATUS_COLORS[selected.status] : "var(--bg3)",
+                  border: `2px solid ${i <= si ? STATUS_COLORS[selected.status] : "var(--border)"}`,
+                  transition: "all 0.5s ease",
+                }}>
+                  {i <= si ? "✓" : ""}
+                </div>
+                <div style={{ fontSize: 10, color: i <= si ? "var(--text)" : "var(--text3)", lineHeight: 1.3, maxWidth: 60, margin: "0 auto" }}>{s}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ position: "absolute", top: 13, left: 24, right: 24, height: 2, background: "var(--border)", zIndex: 0 }}>
+            <div style={{ height: "100%", background: STATUS_COLORS[selected.status], transition: "width 1s ease", width: `${(si / (STATUS_FLOW.length - 1)) * 100}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Order items */}
+      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "20px 24px", marginBottom: 20 }}>
+        <h3 style={{ marginBottom: 16, fontFamily: "'Playfair Display', serif" }}>Order Summary</h3>
+        {selected.items.map(item => (
+          <div key={item.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 14 }}>
+            <span>{item.Image ? (
+  <img
+    src={item.Image}
+    alt={item.name}
+    style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }}
+  />
+) : (
+  <span style={{ fontSize: 40 }}>{item.emoji}</span>
+)} {item.name} × {item.qty}</span>
+            <span style={{ color: "var(--amber)", fontWeight: 600 }}>{item.price * item.qty} EGP</span>
+          </div>
+        ))}
+        <div style={{ borderTop: "1px solid var(--border)", marginTop: 12, paddingTop: 12, display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+          <span>Total</span><span style={{ color: "var(--amber)" }}>{selected.total} EGP</span>
+        </div>
+      </div>
+
+      {/* Past orders */}
+      {orders.length > 1 && (
+        <div>
+          <h3 style={{ marginBottom: 16, fontFamily: "'Playfair Display', serif", color: "var(--text2)", fontSize: 16 }}>Past Orders</h3>
+          {orders.slice(1).map(o => (
+            <div key={o.id} onClick={() => setActiveOrder(o)} style={{
+              background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              padding: "14px 18px", marginBottom: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center",
+              transition: "border-color 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--amber)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
+            >
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{o.id} · {o.restaurantName}</div>
+                <div style={{ fontSize: 12, color: "var(--text3)" }}>{o.items.length} items · {o.total} EGP</div>
+              </div>
+              <Badge color={STATUS_COLORS[o.status]}>{o.status}</Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ORDERS PAGE ──────────────────────────────────────────────────────────────
+function Orders() {
+  const { orders, setActiveOrder, setPage, user } = useApp();
+
+  if (!user) return (
+    <div style={{ maxWidth: 600, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
+      <div style={{ fontSize: 64, marginBottom: 20 }}>🔐</div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 12 }}>Sign in to see your orders</h2>
+      <Btn onClick={() => setPage("auth")}>Sign In</Btn>
+    </div>
+  );
+
+  if (orders.length === 0) return (
+    <div style={{ maxWidth: 600, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
+      <div style={{ fontSize: 80, marginBottom: 20 }}>📋</div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 12 }}>No orders yet</h2>
+      <p style={{ color: "var(--text2)", marginBottom: 28 }}>Your order history will appear here.</p>
+      <Btn onClick={() => setPage("home")}>Start Ordering</Btn>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px" }}>
+      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, marginBottom: 32 }}>My Orders</h1>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {orders.map((o, i) => (
+          <div key={o.id} onClick={() => { setActiveOrder(o); setPage("tracking"); }} style={{
+            background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+            padding: "20px 24px", cursor: "pointer", transition: "all 0.2s",
+            animation: `fadeUp 0.4s ${i * 0.06}s ease both`,
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--amber)"; e.currentTarget.style.transform = "translateX(4px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = ""; }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div>
+                <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--amber)", marginBottom: 4 }}>{o.id}</div>
+                <div style={{ fontWeight: 700, fontSize: 17, fontFamily: "'Playfair Display', serif" }}>{o.restaurantName}</div>
+              </div>
+              <Badge color={STATUS_COLORS[o.status]}>{STATUS_EMOJI[o.status]} {o.status}</Badge>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              {o.items.map(item => (
+                <span key={item.id} style={{ background: "var(--bg3)", borderRadius: 6, padding: "3px 10px", fontSize: 12, color: "var(--text2)" }}>
+                  {item.Image ? (
+                    <img
+                      src={item.Image}
+                      alt={item.name}
+                      style={{ width: 30, height: 30, objectFit: "cover", borderRadius: 4, marginRight: 8 }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 20 }}>{item.emoji}</span>
+                  )}
+                  {item.name} ×{item.qty}
+                </span>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "var(--text2)" }}>
+              <span>Placed at {o.placedAt}</span>
+              <span style={{ color: "var(--amber)", fontWeight: 700 }}>{o.total} EGP →</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+function Auth() {
+  const { login, setPage } = useApp();
+  const [tab, setTab]     = useState("login");
+  const [email, setEmail] = useState("");
+  const [pass, setPass]   = useState("");
+  const [name, setName]   = useState("");
+  const [role, setRole]   = useState("customer");
+  const [error, setError] = useState("");
+
+  const handleSubmit = () => {
+    setError("");
+    if (!email || !pass) { setError("Please fill in all fields."); return; }
+    if (tab === "register" && !name) { setError("Please enter your name."); return; }
+    const ok = login(email, pass, role);
+    if (!ok) setError("Something went wrong. Try again.");
+  };
+
+  return (
+    <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{
+        background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+        padding: "44px 40px", width: "100%", maxWidth: 420, animation: "fadeUp 0.5s ease",
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🍽️</div>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, color: "var(--amber)" }}>Mazboot</h1>
+          <p style={{ color: "var(--text3)", fontSize: 13, marginTop: 4 }}>Delicious food, fast delivery</p>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", background: "var(--bg3)", borderRadius: "var(--radius)", padding: 4, marginBottom: 28 }}>
+          {["login", "register"].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{
+              flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, transition: "all 0.2s",
+              background: tab === t ? "var(--amber)" : "transparent",
+              color: tab === t ? "#1a1200" : "var(--text2)",
+            }}>{t === "login" ? "Sign In" : "Register"}</button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {tab === "register" && <Input label="Full Name" value={name} onChange={setName} placeholder="Your name" />}
+          <Input label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
+          <Input label="Password" type="password" value={pass} onChange={setPass} placeholder="••••••••" />
+
+          {/* Role selector */}
+          <div>
+            <label style={{ fontSize: 13, color: "var(--text2)", fontWeight: 500, display: "block", marginBottom: 8 }}>Role</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[
+                { id: "customer", label: "👤 Customer" },
+                { id: "owner",    label: "🏪 Owner" },
+                { id: "admin",    label: "🛡️ Admin" },
+              ].map(r => (
+                <button key={r.id} onClick={() => setRole(r.id)} style={{
+                  flex: 1, padding: "10px 8px", borderRadius: 8, border: `1px solid ${role === r.id ? "var(--amber)" : "var(--border)"}`,
+                  background: role === r.id ? "var(--amber-glow)" : "var(--bg3)",
+                  color: role === r.id ? "var(--amber)" : "var(--text2)",
+                  cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, transition: "all 0.2s",
+                }}>{r.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {error && <div style={{ background: "#e8443a22", border: "1px solid var(--red)", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "var(--red)" }}>{error}</div>}
+
+          <Btn onClick={handleSubmit} size="lg" style={{ width: "100%", marginTop: 4 }}>
+            {tab === "login" ? "Sign In" : "Create Account"}
+          </Btn>
+
+          <button onClick={() => setPage("home")} style={{ background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+            Continue as guest →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ADMIN PANEL ───────────────────────────────────────────────────────────────
+function Admin() {
+  const { role } = useApp();
+  if (role !== "admin") return <AccessDenied />;
+
+  const stats = [
+    { label: "Total Restaurants", value: RESTAURANTS.length, icon: "🏪", color: "var(--amber)" },
+    { label: "Menu Items", value: RESTAURANTS.reduce((s, r) => s + r.items.length, 0), icon: "🍽️", color: "var(--green)" },
+    { label: "Active Now", value: RESTAURANTS.filter(r => r.isOpen).length, icon: "🟢", color: "#5b8dd9" },
+    { label: "Avg Rating", value: (RESTAURANTS.reduce((s, r) => s + r.rating, 0) / RESTAURANTS.length).toFixed(1), icon: "⭐", color: "#f5a623" },
+  ];
+
+  return (
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 40 }}>
+        <span style={{ fontSize: 32 }}>🛡️</span>
+        <div>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32 }}>Admin Dashboard</h1>
+          <p style={{ color: "var(--text2)", fontSize: 14 }}>System overview and management</p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16, marginBottom: 40 }}>
+        {stats.map((s, i) => (
+          <div key={s.label} style={{
+            background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+            padding: "20px 24px", animation: `fadeUp 0.4s ${i * 0.07}s ease both`,
+          }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: s.color, fontFamily: "'Playfair Display', serif" }}>{s.value}</div>
+            <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 4 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Restaurant table */}
+      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20 }}>Restaurants</h3>
+          <Btn size="sm">+ Add Restaurant</Btn>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "var(--bg3)", borderBottom: "1px solid var(--border)" }}>
+                {["Restaurant", "Cuisine", "Status", "Rating", "Items", "Actions"].map(h => (
+                  <th key={h} style={{ padding: "12px 20px", textAlign: "left", fontSize: 12, color: "var(--text3)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {RESTAURANTS.map((r, i) => (
+                <tr key={r.id} style={{ borderBottom: "1px solid var(--border)", transition: "background 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "var(--bg3)"}
+                  onMouseLeave={e => e.currentTarget.style.background = ""}
+                >
+                  <td style={{ padding: "14px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}><img src={r.image} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></span>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{r.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text3)" }}>ID: {r.id}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "14px 20px", fontSize: 14, color: "var(--text2)" }}>{r.cuisine}</td>
+                  <td style={{ padding: "14px 20px" }}>
+                    <Badge color={r.isOpen ? "var(--green)" : "var(--text3)"}>{r.isOpen ? "Open" : "Closed"}</Badge>
+                  </td>   
+                  <td style={{ padding: "14px 20px", color: "var(--amber)", fontWeight: 600 }}>⭐ {r.rating}</td>
+                  <td style={{ padding: "14px 20px", fontSize: 14, color: "var(--text2)" }}>{r.items.length}</td>
+                  <td style={{ padding: "14px 20px" }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Btn variant="ghost" size="sm">Edit</Btn>
+                      <Btn variant="danger" size="sm">Delete</Btn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── OWNER PANEL ───────────────────────────────────────────────────────────────
+function Owner() {
+  const { role } = useApp();
+  if (role !== "owner") return <AccessDenied />;
+  const r = RESTAURANTS[0]; // demo
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 40 }}>
+        <span style={{ fontSize: 40 }}><img src={r.image} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></span>
+        <div>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30 }}>{r.name}</h1>
+          <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+            <Badge color="var(--green)">⭐ {r.rating}</Badge>
+            <Badge color={r.isOpen ? "var(--green)" : "var(--text3)"}>{r.isOpen ? "Open" : "Closed"}</Badge>
+          </div>
+        </div>
+        <Btn size="sm" variant="ghost" style={{ marginLeft: "auto" }}>Edit Info</Btn>
+      </div>
+
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22 }}>Menu Items</h2>
+          <Btn size="sm">+ Add Item</Btn>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {r.items.map((item, i) => (
+            <div key={item.id} style={{
+              background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+              padding: "14px 20px", display: "flex", alignItems: "center", gap: 14,
+              animation: `fadeUp 0.4s ${i * 0.05}s ease both`,
+            }}>
+              <span style={{ fontSize: 28 }}>{item.Image ? (
+  <img
+    src={item.Image}
+    alt={item.name}
+    style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8 }}
+  />
+) : (
+  <span style={{ fontSize: 40 }}>{item.emoji}</span>
+)}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>{item.name}</div>
+                <div style={{ fontSize: 12, color: "var(--text3)" }}>{item.category} · {item.desc}</div>
+              </div>
+              <span style={{ color: "var(--amber)", fontWeight: 700 }}>{item.price} EGP</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn variant="ghost" size="sm">Edit</Btn>
+                <Btn variant="danger" size="sm">Delete</Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AccessDenied() {
+  const { setPage } = useApp();
+  return (
+    <div style={{ maxWidth: 500, margin: "80px auto", padding: 24, textAlign: "center" }}>
+      <div style={{ fontSize: 64, marginBottom: 20 }}>🚫</div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 12 }}>Access Denied</h2>
+      <p style={{ color: "var(--text2)", marginBottom: 28 }}>You don't have permission to view this page.</p>
+      <Btn onClick={() => setPage("home")}>Go Home</Btn>
+    </div>
+  );
+}
+
+// ─── APP SHELL ────────────────────────────────────────────────────────────────
+function Router() {
+  const { page } = useApp();
+  const pages = { home: Home, menu: Menu, cart: Cart, tracking: Tracking, orders: Orders, auth: Auth, admin: Admin, owner: Owner };
+  const Page = pages[page] || Home;
+  return <Page />;
+}
+
+export default function App() {
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <AppProvider>
+        <div style={{ minHeight: "100vh" }}>
+          <Navbar />
+          <main>
+            <Router />
+          </main>
+          <Toast />
+          {/* Footer */}
+          <footer style={{ borderTop: "1px solid var(--border)", marginTop: 80, padding: "32px 24px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", color: "var(--amber)", fontSize: 20, marginBottom: 8 }}>🍽️ Mazboot</div>
+            <p style={{ color: "var(--text3)", fontSize: 13 }}>Food Ordering System · Built with React + Spring Boot Microservices</p>
+          </footer>
+        </div>
+      </AppProvider>
+    </>
+  );
+}

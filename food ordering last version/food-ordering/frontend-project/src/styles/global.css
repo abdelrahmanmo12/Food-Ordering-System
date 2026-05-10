@@ -1,0 +1,91 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #111010;
+    --bg2:       #1a1917;
+    --bg3:       #242220;
+    --surface:   #2c2a27;
+    --border:    #3a3835;
+    --amber:     #f5a623;
+    --amber-dim: #c47d0e;
+    --amber-glow:#f5a62322;
+    --red:       #e8443a;
+    --green:     #4caf7d;
+    --text:      #f0ece4;
+    --text2:     #a09b92;
+    --text3:     #6b6660;
+    --white:     #ffffff;
+    --radius:    12px;
+    --radius-lg: 20px;
+    --shadow:    0 8px 32px rgba(0,0,0,0.5);
+    --shadow-amber: 0 0 40px rgba(245,166,35,0.15);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideRight {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+  @keyframes badgePop {
+    0%   { transform: scale(0); }
+    70%  { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  @keyframes toastSlide {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
+  }
+  @keyframes slideOutRight {
+    from { transform: translateX(0);   opacity: 1; }
+    to   { transform: translateX(100%); opacity: 0; }
+  }
+
+  .fade-up  { animation: fadeUp  0.5s ease both; }
+  .fade-in  { animation: fadeIn  0.4s ease both; }
+
+  /* Utility */
+  .mono { font-family: 'DM Mono', monospace; }
+
