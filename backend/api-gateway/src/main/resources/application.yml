@@ -1,0 +1,204 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: Api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_LAST
+      globalcors:
+        add-to-simple-url-handler-mapping: true 
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+
+      routes:
+        - id: auth-service-public
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/login
+            - Path=/auth/register/**
+            - Path=/auth/refresh
+
+        - id: auth-service-private
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**
+          filters:
+            - AuthenticationFilter
+
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - AuthenticationFilter
+
+        - id: restaurant-public
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/restaurants, /restaurants/*
+            - Method=GET,OPTIONS
+
+        - id: restaurant-admin
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/restaurants/admin/**,/restaurants/**
+          filters:
+            - AuthenticationFilter
+
+        - id: restaurant-admin-requests
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/restaurants/admin/requests/**
+          filters:
+            - AuthenticationFilter
+
+        - id: menu-public
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/menu/**
+            - Method=GET,OPTIONS
+
+        # - id: restaurant-private
+        #   uri: lb://RESTAURANT-SERVICE
+        #   predicates:
+        #     - Path=/restaurants/**
+        #     - Method=POST,PUT,DELETE,PATCH
+        #   filters:
+        #     - AuthenticationFilter
+
+        - id: menu-private
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/menu/**
+            - Method=POST,PUT,DELETE,PATCH,OPTIONS
+          filters:
+            - AuthenticationFilter
+
+        # ORDER-SERVICE
+        - id: order-service-orders
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - AuthenticationFilter
+
+        - id: order-service-cart
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - AuthenticationFilter
+
+        # NOTIFICATION-SERVICE
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - AuthenticationFilter
+
+        # OFFER
+
+        - id: offer-public
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/offers/**
+            - Method=GET,OPTIONS
+
+        - id: offer-private
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/offers/**
+            - Method=POST,PUT,DELETE,PATCH,OPTIONS
+          filters:
+            - AuthenticationFilter
+
+          # USERSERVICE
+        - id: user-profiles
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/users/profiles/**
+          filters:
+            - AuthenticationFilter
+
+          # ORDER-SERVICE
+        - id: order-service-orders
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - AuthenticationFilter
+            
+        - id: order-service-cart
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/cart/**
+          filters:
+            - AuthenticationFilter
+
+        - id: delivery-service
+          uri: lb://DELIVERY-SERVICE
+          predicates:
+            - Path=/api/deliveries/**
+          filters:
+            - AuthenticationFilter
+
+        - id: owner-reports
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/owner/restaurants/**/reports/**
+          filters:
+            - AuthenticationFilter
+
+        - id: rider-stats
+          uri: lb://DELIVERY-SERVICE
+          predicates:
+            - Path=/rider/stats/**
+          filters:
+            - AuthenticationFilter
+
+        - id: promos-apply
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/promos/apply
+          filters:
+            - AuthenticationFilter
+
+        - id: offers-apply
+          uri: lb://RESTAURANT-SERVICE
+          predicates:
+            - Path=/offers/apply
+          filters:
+            - AuthenticationFilter
+
+        - id: ratings-endpoints
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/ratings/**
+          filters:
+            - AuthenticationFilter
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://discovery-server:8761/eureka/
+
+jwt:
+  public:
+    key: >-
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqL9qG0qA5i0Hjm5LvUH2j70tu17pYrUi+U6o
+      ySwdF3trdQa7dj4ECTq5S1Ib/c8If5HlvN30FYf4TIdSJdb95hlG8ZIBImxopEphrD3jhIRwct5TTMWw
+      Rhz4bZAh8NvMnG9EdrKBtNx87RdWiK7LIXSxVV0QjyVlKnhHPAHU3T9OgDgPKPbmMy/mnCtD8CdxNAwN
+      1+bvcCjxyn1pNtoFpB5yYe6+pbx0A3B2Vl0FbKgTSMRjdy7vNeEs46zzD79SeYbiMwzg4Gm/psZta/bx
+      ZC2FMmvPar3vH3tADnxtf2lW4VzVIwkHBjZ/B7U8rE2RmTd3xtNPB5RkhLkjUc9UrwIDAQAB
