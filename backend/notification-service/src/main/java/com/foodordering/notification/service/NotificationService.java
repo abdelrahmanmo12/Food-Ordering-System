@@ -27,19 +27,37 @@ public class NotificationService {
     public void handleUserRegistered(UserRegisteredEvent event) {
         log.info("Handling UserRegisteredEvent for userId={}, email={}", event.getUserId(), event.getEmail());
 
-        String message = event.getRole().equals("OWNER")
+        // 1. Notify the user who just registered
+        String welcomeMessage = event.getRole().equals("OWNER")
                 ? "Welcome, " + event.getEmail() + "! Your owner account is pending admin approval."
                 : "Welcome, " + event.getEmail() + "! Your account has been created successfully.";
 
-        Notification notification = Notification.builder()
+        Notification userNotification = Notification.builder()
                 .userId(event.getUserId())
                 .type(Notification.NotificationType.USER_REGISTERED)
-                .message(message)
+                .message(welcomeMessage)
                 .isRead(false)
                 .build();
 
-        notificationRepository.save(notification);
-        log.info("Saved USER_REGISTERED notification for userId={}", event.getUserId());
+        notificationRepository.save(userNotification);
+        log.info("Saved welcome notification for userId={}", event.getUserId());
+
+        // 2. If it's an owner, also notify the admin
+        if ("OWNER".equals(event.getRole())) {
+            String adminId = "1"; // Assuming admin userId is 1
+            String adminMessage = String.format("New owner registration: %s (ID: %s). Please review and approve the account.", 
+                                                event.getEmail(), event.getUserId());
+            
+            Notification adminNotification = Notification.builder()
+                    .userId(adminId)
+                    .type(Notification.NotificationType.GENERAL)
+                    .message(adminMessage)
+                    .isRead(false)
+                    .build();
+            
+            notificationRepository.save(adminNotification);
+            log.info("Saved admin notification for new owner registration from email={}", event.getEmail());
+        }
     }
 
     @Transactional

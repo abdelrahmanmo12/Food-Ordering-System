@@ -39,6 +39,9 @@ public class UserService {
 
     @Autowired
     UserServiceClient userServiceClient;
+
+    @Autowired
+    private org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate;
     
     @Transactional
     public String registerCustomer(@Valid RegisterRequest user) {
@@ -60,6 +63,9 @@ public class UserService {
         profileClient.setType("USER");
 
         userServiceClient.createProfile(profileClient);
+
+        // Send Kafka event
+        sendRegistrationEvent(newUser);
 
         return "registered";
     }
@@ -85,6 +91,9 @@ public class UserService {
 
         userServiceClient.createProfile(profileClient);
 
+        // Send Kafka event
+        sendRegistrationEvent(newUser);
+
         return "registered";
     }
 
@@ -109,7 +118,25 @@ public class UserService {
 
         userServiceClient.createProfile(profileClient);
 
+        // Send Kafka event
+        sendRegistrationEvent(newUser);
+
         return "registered";
+    }
+
+    private void sendRegistrationEvent(User user) {
+        try {
+            com.foodordering.auth.dto.Events.UserRegisteredEvent event = com.foodordering.auth.dto.Events.UserRegisteredEvent.builder()
+                    .userId(String.valueOf(user.getUser_id()))
+                    .email(user.getEmail())
+                    .role(user.getRole().name())
+                    .build();
+            
+            kafkaTemplate.send("user-registered", event);
+        } catch (Exception e) {
+            // Log error but don't fail registration
+            System.err.println("Failed to send UserRegisteredEvent: " + e.getMessage());
+        }
     }
 
         public String changePassword(String userId, ChangePasswordRequest request) {
