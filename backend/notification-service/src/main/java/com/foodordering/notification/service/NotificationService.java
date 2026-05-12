@@ -21,13 +21,12 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    // ─── Called by Kafka Consumer ──────────────────────────────────────────────
+
 
     @Transactional
     public void handleUserRegistered(UserRegisteredEvent event) {
         log.info("Handling UserRegisteredEvent for userId={}, email={}", event.getUserId(), event.getEmail());
 
-        // 1. Notify the user who just registered
         String welcomeMessage = event.getRole().equals("OWNER")
                 ? "Welcome, " + event.getEmail() + "! Your owner account is pending admin approval."
                 : "Welcome, " + event.getEmail() + "! Your account has been created successfully.";
@@ -42,9 +41,8 @@ public class NotificationService {
         notificationRepository.save(userNotification);
         log.info("Saved welcome notification for userId={}", event.getUserId());
 
-        // 2. If it's an owner, also notify the admin
         if ("OWNER".equals(event.getRole())) {
-            String adminId = "1"; // Assuming admin userId is 1
+            String adminId = "1";
             String adminMessage = String.format("New owner registration: %s (ID: %s). Please review and approve the account.", 
                                                 event.getEmail(), event.getUserId());
             
@@ -100,11 +98,13 @@ public class NotificationService {
         log.info("Saved {} notification for userId={}", type, event.getUserId());
     }
 
-    // ─── REST API Methods ──────────────────────────────────────────────────────
+
 
     public List<NotificationResponse> getNotificationsForUser(String userId) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
+        log.info("Fetching notifications for userId: {}", userId);
+        List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        log.info("Found {} notifications for userId: {}", notifications.size(), userId);
+        return notifications.stream()
                 .map(NotificationResponse::from)
                 .toList();
     }

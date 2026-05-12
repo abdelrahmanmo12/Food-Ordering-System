@@ -30,14 +30,12 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final OrderValidationService orderValidationService;
-    private final OrderServiceClient orderServiceClient; // محتفظين به للـ Validation أو كـ Backup
+    private final OrderServiceClient orderServiceClient;
     private final List<PaymentStrategy> strategies;
     private final StripeService stripeService;
 
-    // 1. إضافة KafkaTemplate لإرسال الرسائل
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    // اسم الـ Topic الموحد لأحداث الدفع
     private static final String PAYMENT_TOPIC = "payment-events-topic";
     private static final String NOTIFICATION_TOPIC = "send-notification";
 
@@ -80,7 +78,6 @@ public class PaymentService {
             payment.setTransactionId("REF-" + payment.getTransactionId());
             Payment savedPayment = paymentRepository.save(payment);
 
-            // 2. إرسال حدث Kafka عند استرداد المبلغ لتحديث حالة الأوردر في الخدمات الأخرى
             sendPaymentEvent(savedPayment, "PAYMENT_REFUNDED");
 
             return paymentMapper.toResponse(savedPayment);
@@ -102,11 +99,8 @@ public class PaymentService {
             payment.setStatus(newStatus);
             paymentRepository.save(payment);
 
-            // 3. بدلاً من استدعاء Feign Client مباشرة، نرسل Event
-            // هذا يجعل النظام Event-Driven ويقلل التبعية (Decoupling)
             sendPaymentEvent(payment, "PAYMENT_STATUS_UPDATED");
             
-            // Send notification to user
             sendNotification(payment.getUserId().toString(), 
                 "Payment " + payment.getStatus() + " for Order #" + payment.getOrderId());
             
@@ -114,7 +108,6 @@ public class PaymentService {
         }
     }
 
-    // ميثود موحدة لإرسال أحداث الكافكا
     private void sendPaymentEvent(Payment payment, String eventAction) {
         Map<String, Object> eventPayload = new HashMap<>();
         eventPayload.put("action", eventAction);
@@ -137,8 +130,6 @@ public class PaymentService {
         };
     }
 
-    // --- ميثودز المساعدة والتحميل تفضل كما هي ---
-
     public PaymentResponse getPaymentByPaymentId(String paymentId) {
         Payment payment = paymentRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found ID: " + paymentId));
@@ -160,7 +151,7 @@ public class PaymentService {
     private Long extractUserId(Authentication authentication) {
         return Long.parseLong(authentication.getName());
     }
-    // 1. ميثود تأكيد الدفع (اللي موقفة الـ Build حالياً)
+
     @Transactional
     public void confirmStripePayment(String paymentIntentId, String orderId, String status, Authentication authentication) {
         log.info("Confirming Stripe payment for Order: {} with status: {}", orderId, status);
@@ -168,7 +159,6 @@ public class PaymentService {
         Payment payment = paymentRepository.findByStripePaymentIntentId(paymentIntentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found for Intent ID: " + paymentIntentId));
 
-        // تحديث الحالة بناءً على اللي جاي من الـ Frontend أو الـ Status
         if ("succeeded".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status)) {
             payment.setStatus(Payment.PaymentStatus.COMPLETED);
         } else {
@@ -177,10 +167,8 @@ public class PaymentService {
         
         paymentRepository.save(payment);
         
-        // إرسال حدث لكافكا عشان الـ Order Service تعرف
         sendPaymentEvent(payment, "PAYMENT_CONFIRMED");
 
-        // Send notification to user
         sendNotification(payment.getUserId().toString(), 
             "Payment confirmed for Order #" + payment.getOrderId());
     }
@@ -197,7 +185,6 @@ public class PaymentService {
         }
     }
 
-    // 2. ميثود إلغاء الدفع (عشان ميعملش Error بعدها)
     @Transactional
     public PaymentResponse cancelPayment(String paymentId) {
         Payment payment = paymentRepository.findByPaymentId(paymentId)
@@ -210,7 +197,6 @@ public class PaymentService {
         return paymentMapper.toResponse(saved);
     }
 
-    // 3. ميثود جلب الدفعات بالحالة (عشان ميعملش Error بعدها)
     public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
         return mapPaymentsToResponse(paymentRepository.findByStatus(status));
     }

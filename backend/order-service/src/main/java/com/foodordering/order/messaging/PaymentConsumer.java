@@ -21,26 +21,22 @@ public class PaymentConsumer {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
 
-    // استماع للـ Topic الخاص بأحداث الدفع
     @KafkaListener(topics = "payment-events-topic", groupId = "order-service-group")
     public void consumePaymentEvent(Map<String, Object> eventData) {
         log.info("Received payment event from Kafka: {}", eventData);
 
         try {
-            // استخراج البيانات من الرسالة (JSON -> Map)
             String orderId = (String) eventData.get("orderId");
             String status = (String) eventData.get("status");
             String action = (String) eventData.get("action");
 
             log.info("Processing {} for Order ID: {} with Payment Status: {}", action, orderId, status);
 
-            // البحث عن الأوردر وتحديث حالته
             orderRepository.findById(orderId).ifPresentOrElse(order -> {
                 updateOrderStatus(order, status);
                 orderRepository.save(order);
                 log.info("Order {} successfully updated to {}", orderId, order.getStatus());
                 
-                // Notify customer and owner
                 orderService.handlePostPayment(order);
             }, () -> log.error("Order not found with ID: {}", orderId));
 
@@ -52,7 +48,7 @@ public class PaymentConsumer {
     private void updateOrderStatus(Order order, String paymentStatus) {
         switch (paymentStatus) {
             case "COMPLETED":
-                order.setStatus(OrderStatus.PAID); // ✅ Changed from CONFIRMED to PAID
+                order.setStatus(OrderStatus.PAID);
                 break;
             case "FAILED":
             case "CANCELLED":
@@ -66,7 +62,6 @@ public class PaymentConsumer {
         }
     }
 
-    // ميثود للتأكد من أن الـ Consumer بدأ العمل فور تشغيل التطبيق
     @EventListener(ApplicationReadyEvent.class)
     public void checkKafka() {
         log.info(">>>> Kafka Consumer is READY and Listening on topic: payment-events-topic...");

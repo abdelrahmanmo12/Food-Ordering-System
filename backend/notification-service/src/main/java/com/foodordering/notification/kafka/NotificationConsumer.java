@@ -16,21 +16,21 @@ public class NotificationConsumer {
 
     private final NotificationService notificationService;
 
-    /**
-     * Listens on topic: user-registered
-     * Published by: auth-service after successful registration
-     */
     @KafkaListener(
             topics = "${kafka.topics.user-registered}",
             groupId = "${spring.kafka.consumer.group-id}"
     )
     public void consumeUserRegistered(java.util.Map<String, Object> eventData) {
-        log.info("[KAFKA] Received UserRegisteredEvent: {}", eventData);
-        UserRegisteredEvent event = new UserRegisteredEvent();
-        event.setUserId(String.valueOf(eventData.get("userId")));
-        event.setEmail((String) eventData.get("email"));
-        event.setRole((String) eventData.get("role"));
-        notificationService.handleUserRegistered(event);
+        log.info("[KAFKA] consumeUserRegistered triggered with data: {}", eventData);
+        try {
+            UserRegisteredEvent event = new UserRegisteredEvent();
+            event.setUserId(String.valueOf(eventData.get("userId")));
+            event.setEmail((String) eventData.get("email"));
+            event.setRole((String) eventData.get("role"));
+            notificationService.handleUserRegistered(event);
+        } catch (Exception e) {
+            log.error("[KAFKA] Error in consumeUserRegistered: {}", e.getMessage(), e);
+        }
     }
 
     @KafkaListener(

@@ -339,11 +339,13 @@ public class OrderServiceImpl implements OrderService {
             case PAID: return "Payment confirmed! Waiting for restaurant to confirm your order.";
             case CONFIRMED: return "Order confirmed! Restaurant is preparing your order.";
             case PREPARING: return "Your order is being prepared by the restaurant.";
+            case READY: return "Your order is ready for pickup/delivery!";
             case OUT_FOR_DELIVERY: return "Your order is on the way! Driver is heading to you.";
             case DELIVERED: return "Order delivered! Enjoy your meal.";
             case CANCELLED: return "Your order has been cancelled.";
+            case REFUNDED: return "Your order has been refunded.";
             case CREATED: return "Order created! Preparing for checkout.";
-            default: return "Unknown status.";
+            default: return "Order status updated to " + status;
         }
     }
 
@@ -353,6 +355,9 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(status);
         orderRepo.save(order);
         sendKafkaEvent(order);
+        
+        // Notify customer
+        sendNotificationSafe(Long.valueOf(order.getCustomerId()), order.getOrderNumber(), getStatusMessage(order.getStatus()));
     }
 
     @Override

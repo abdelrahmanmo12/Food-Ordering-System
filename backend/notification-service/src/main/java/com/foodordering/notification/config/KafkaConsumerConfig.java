@@ -1,4 +1,5 @@
 package com.foodordering.notification.config;
+
 import com.foodordering.notification.kafka.events.OrderPlacedEvent;
 import com.foodordering.notification.kafka.events.UserRegisteredEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -12,13 +13,16 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import java.util.HashMap;
 import java.util.Map;
+
 @Configuration
 public class KafkaConsumerConfig {
+
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
+
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
-    // ─── Shared base config ────────────────────────────────────────────────────
+
     private Map<String, Object> baseConsumerConfig() {
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -27,17 +31,18 @@ public class KafkaConsumerConfig {
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         return config;
     }
-    // ─── UserRegisteredEvent consumer ─────────────────────────────────────────
+
     @Bean
     public ConsumerFactory<String, UserRegisteredEvent> userRegisteredConsumerFactory() {
         JsonDeserializer<UserRegisteredEvent> deserializer =
-                new JsonDeserializer<>(UserRegisteredEvent.class, false); // ← false هنا
+                new JsonDeserializer<>(UserRegisteredEvent.class, false);
         return new DefaultKafkaConsumerFactory<>(
                 baseConsumerConfig(),
                 new StringDeserializer(),
                 deserializer
         );
     }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, UserRegisteredEvent>
     userRegisteredKafkaListenerContainerFactory() {
@@ -46,17 +51,18 @@ public class KafkaConsumerConfig {
         factory.setConsumerFactory(userRegisteredConsumerFactory());
         return factory;
     }
-    // ─── OrderPlacedEvent consumer ────────────────────────────────────────────
+
     @Bean
     public ConsumerFactory<String, OrderPlacedEvent> orderPlacedConsumerFactory() {
         JsonDeserializer<OrderPlacedEvent> deserializer =
-                new JsonDeserializer<>(OrderPlacedEvent.class, false); // ← false هنا
+                new JsonDeserializer<>(OrderPlacedEvent.class, false);
         return new DefaultKafkaConsumerFactory<>(
                 baseConsumerConfig(),
                 new StringDeserializer(),
                 deserializer
         );
     }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderPlacedEvent>
     orderPlacedKafkaListenerContainerFactory() {

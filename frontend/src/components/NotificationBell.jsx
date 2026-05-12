@@ -1,20 +1,10 @@
-// components/NotificationBell.jsx
-// Drop this into your Navbar wherever you want the bell icon.
-//
-// Endpoints:
-//   GET   /api/notifications/my-notifications   → requires X-User-Id + X-User-Role headers
-//   PATCH /api/notifications/mark-as-read       → requires X-User-Id + X-User-Role headers
-//
-// Usage in Navbar:
-//   import NotificationBell from '../components/NotificationBell';
-//   <NotificationBell />
 
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useApp } from '../context/AppContext';
 
-// ─── Fetch helpers ─────────────────────────────────────────────────────────
+
 
 async function fetchNotifications() {
   const response = await api.get('/api/notifications/my-notifications');
@@ -25,7 +15,7 @@ function markAllRead() {
   return api.patch('/api/notifications/mark-as-read');
 }
 
-// ─── Single notification row ──────────────────────────────────────────────
+
 
 function NotifRow({ notif }) {
   const isUnread = !notif.read;
@@ -37,7 +27,7 @@ function NotifRow({ notif }) {
       display: 'flex', gap: 12, alignItems: 'flex-start',
       transition: 'background 0.2s',
     }}>
-      {}
+      { }
       <div style={{
         width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 6,
         background: isUnread ? '#f97316' : 'transparent',
@@ -62,7 +52,7 @@ function NotifRow({ notif }) {
   );
 }
 
-// ─── Dropdown panel ──────────────────────────────────────────────────────────
+
 
 function NotifPanel({ notifications, onMarkAllRead, isPending, onClose }) {
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -77,7 +67,7 @@ function NotifPanel({ notifications, onMarkAllRead, isPending, onClose }) {
       overflow: 'hidden', zIndex: 1000,
       display: 'flex', flexDirection: 'column',
     }}>
-      {}
+      { }
       <div style={{
         padding: '14px 16px', borderBottom: '1px solid #f3f4f6',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -108,7 +98,7 @@ function NotifPanel({ notifications, onMarkAllRead, isPending, onClose }) {
         )}
       </div>
 
-      {}
+      { }
       <div style={{ overflowY: 'auto', flex: 1 }}>
         {notifications.length === 0 ? (
           <div style={{ padding: '40px 16px', textAlign: 'center', color: '#9ca3af' }}>
@@ -123,7 +113,7 @@ function NotifPanel({ notifications, onMarkAllRead, isPending, onClose }) {
   );
 }
 
-// ─── Bell button (export this into your Navbar) ───────────────────────────────
+
 
 export default function NotificationBell() {
   const { user } = useApp();
@@ -131,7 +121,6 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  // Close panel when clicking outside
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
@@ -141,7 +130,6 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Poll every 30 seconds while logged in
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
@@ -160,7 +148,7 @@ export default function NotificationBell() {
 
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      {}
+      { }
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -188,7 +176,7 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {}
+      { }
       {open && (
         <NotifPanel
           notifications={notifications}

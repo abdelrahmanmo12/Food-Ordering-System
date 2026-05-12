@@ -64,7 +64,6 @@ public class UserService {
 
         userServiceClient.createProfile(profileClient);
 
-        // Send Kafka event
         sendRegistrationEvent(newUser);
 
         return "registered";
@@ -91,7 +90,6 @@ public class UserService {
 
         userServiceClient.createProfile(profileClient);
 
-        // Send Kafka event
         sendRegistrationEvent(newUser);
 
         return "registered";
@@ -118,7 +116,6 @@ public class UserService {
 
         userServiceClient.createProfile(profileClient);
 
-        // Send Kafka event
         sendRegistrationEvent(newUser);
 
         return "registered";
@@ -134,7 +131,6 @@ public class UserService {
             
             kafkaTemplate.send("user-registered", event);
         } catch (Exception e) {
-            // Log error but don't fail registration
             System.err.println("Failed to send UserRegisteredEvent: " + e.getMessage());
         }
     }
