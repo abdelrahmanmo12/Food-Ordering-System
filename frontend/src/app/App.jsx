@@ -28,9 +28,9 @@ export default function App() {
       <QueryProvider>
         <BrowserRouter>
           <AuthProvider>
-            <AppProvider>
-              <NotificationProvider>
-                <CartProvider>
+            <CartProvider>
+              <AppProvider>
+                <NotificationProvider>
                   <Navbar />
 
                   <main>
@@ -52,9 +52,9 @@ export default function App() {
                   </main>
 
                   <Toast />
-                </CartProvider>
-              </NotificationProvider>
-            </AppProvider>
+                </NotificationProvider>
+              </AppProvider>
+            </CartProvider>
           </AuthProvider>
         </BrowserRouter>
       </QueryProvider>

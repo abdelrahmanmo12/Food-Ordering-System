@@ -67,7 +67,7 @@ public class SecurityAspect {
         }
 
         Restaurant restaurant = restaurantService.getRestaurantById(restaurantIdToChecked);
-        if (!restaurant.getOwnerId().equals(Long.valueOf(user.getId()))) {
+        if (restaurant.getOwnerId() == null || !restaurant.getOwnerId().equals(Long.valueOf(user.getId()))) {
             throw new UnauthorizedAccessException(
                     "Access denied: You must be the OWNER of this restaurant or an ADMIN");
         }
@@ -110,7 +110,7 @@ public class SecurityAspect {
         }
 
         Restaurant restaurant = restaurantService.getRestaurantById(restaurantIdToChecked);
-        if (!restaurant.getOwnerId().equals(Long.valueOf(user.getId()))) {
+        if (restaurant.getOwnerId() == null || !restaurant.getOwnerId().equals(Long.valueOf(user.getId()))) {
             throw new UnauthorizedAccessException("Access denied: You must be the OWNER of this restaurant");
         }
     }

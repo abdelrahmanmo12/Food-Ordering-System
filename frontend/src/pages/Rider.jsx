@@ -185,14 +185,14 @@ export default function Rider() {
 
       {activeTab === 'active' && (
         <ActiveDeliveriesTab
-          deliveries={myDeliveries.filter(d => d.status === 'on_the_way')}
+          deliveries={myDeliveries.filter(d => d.status?.toUpperCase() === 'ON_THE_WAY')}
           onUpdateStatus={handleUpdateStatus}
         />
       )}
 
       {activeTab === 'history' && (
         <DeliveryHistoryTab
-          deliveries={myDeliveries.filter(d => d.status === 'delivered')}
+          deliveries={myDeliveries.filter(d => d.status?.toUpperCase() === 'DELIVERED')}
         />
       )}
 

@@ -1,49 +1,79 @@
 package com.foodordering.notification.controller;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.foodordering.notification.Dto.NotificationRequest;
-import com.foodordering.notification.Dto.UserDTO;
-import com.foodordering.notification.model.OrderStatusNotification;
+import com.foodordering.notification.dto.NotificationResponse;
 import com.foodordering.notification.service.NotificationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
+/**
+ * All endpoints expect the API Gateway to inject X-User-Id header.
+ * Routes must be added to the gateway config (see notes below).
+ */
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/notifications")
+@RequiredArgsConstructor
+@Slf4j
 public class NotificationController {
 
-    @Autowired
-    private NotificationService service;
+    private final NotificationService notificationService;
 
-    @PostMapping("/send")
-    public void createNotification(@RequestBody NotificationRequest request) {
-        service.saveNotification(request);
+    /**
+     * GET /notifications
+     * Returns all notifications for the authenticated user.
+     * Header: X-User-Id (injected by API Gateway from JWT)
+     */
+    @GetMapping
+    public ResponseEntity<List<NotificationResponse>> getMyNotifications(
+            @RequestHeader("X-User-Id") String userId) {
+        log.info("GET /notifications for userId={}", userId);
+        return ResponseEntity.ok(notificationService.getNotificationsForUser(userId));
     }
 
-    @GetMapping("/my-notifications")
-    public ResponseEntity<List<OrderStatusNotification>> getUserNotifications(
-        @RequestHeader("X-User-Id") Long userId,
-        @RequestHeader(value = "X-User-Role") String role
-    ) {
-        UserDTO user = new UserDTO(String.valueOf(userId), role, null);
-        return ResponseEntity.ok(service.getUnreadNotifications(userId, user));
+    /**
+     * GET /notifications/unread
+     * Returns only unread notifications.
+     */
+    @GetMapping("/unread")
+    public ResponseEntity<List<NotificationResponse>> getUnread(
+            @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(notificationService.getUnreadNotificationsForUser(userId));
     }
 
-    @PatchMapping("/mark-as-read")
-    public void markAsRead(
-        @RequestHeader("X-User-Id") Long userId,
-        @RequestHeader(value = "X-User-Role") String role
-    ) {
-        UserDTO user = new UserDTO(String.valueOf(userId), role, null);
-        service.markAllAsRead(userId, user);
+    /**
+     * GET /notifications/unread/count
+     * Returns number of unread notifications (useful for badge counter).
+     */
+    @GetMapping("/unread/count")
+    public ResponseEntity<Map<String, Long>> getUnreadCount(
+            @RequestHeader("X-User-Id") String userId) {
+        long count = notificationService.getUnreadCount(userId);
+        return ResponseEntity.ok(Map.of("unreadCount", count));
+    }
+
+    /**
+     * PATCH /notifications/{id}/read
+     * Marks a single notification as read.
+     */
+    @PatchMapping("/{id}/read")
+    public ResponseEntity<NotificationResponse> markAsRead(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(notificationService.markAsRead(id, userId));
+    }
+
+    /**
+     * PATCH /notifications/read-all
+     * Marks all user notifications as read.
+     */
+    @PatchMapping("/read-all")
+    public ResponseEntity<Map<String, String>> markAllAsRead(
+            @RequestHeader("X-User-Id") String userId) {
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(Map.of("message", "All notifications marked as read"));
     }
 }

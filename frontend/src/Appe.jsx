@@ -31,9 +31,9 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AppProvider>
-            <NotificationProvider>
-              <CartProvider>
+          <CartProvider>
+            <AppProvider>
+              <NotificationProvider>
 
                 <Navbar />
 
@@ -58,9 +58,9 @@ export default function App() {
 
                 <Toast />
 
-              </CartProvider>
-            </NotificationProvider>
-          </AppProvider>
+              </NotificationProvider>
+            </AppProvider>
+          </CartProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

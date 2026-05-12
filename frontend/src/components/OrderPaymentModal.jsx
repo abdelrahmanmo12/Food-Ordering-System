@@ -19,7 +19,7 @@ import { api } from '../api/client';
 // Move to VITE_STRIPE_PUBLISHABLE_KEY env var for production.
 const stripePromise = loadStripe(
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
-  'pk_test_51TNkmZLaPu9ajsblOXkmm0uFNncVcq0FktYW0TLa7iTlgPmbS5nnK0LNTaAy4rHNOGeD6p3zCjGYS34RwcevFf8m00QQQa5hQE'
+  'pk_test_51TNkmnPturEXMFMX7uM1DErDimjl5cDNwn4I770EgsnYeI2l5TsWHApMlKITexMdalECB8YYpPCJNjFtZExUo0R000usoN83lD'
 );
 
 // ─── Card element styles ──────────────────────────────────────────────────────

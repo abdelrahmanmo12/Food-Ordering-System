@@ -1,12 +1,7 @@
 package com.foodordering.payment.service;
 
 import com.foodordering.payment.client.OrderServiceClient;
-import com.foodordering.payment.dto.OrderDTO;
-import com.foodordering.payment.dto.OrderStatusUpdateRequest;
-import com.foodordering.payment.dto.PaymentRequest;
-import com.foodordering.payment.dto.PaymentResponse;
-import com.foodordering.payment.dto.RefundRequest;
-import com.foodordering.payment.dto.StripePaymentIntentResponse;
+import com.foodordering.payment.dto.*;
 import com.foodordering.payment.entity.Payment;
 import com.foodordering.payment.exception.PaymentNotFoundException;
 import com.foodordering.payment.exception.PaymentProcessingException;
@@ -16,10 +11,12 @@ import com.foodordering.payment.service.strategy.PaymentStrategy;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,15 +30,20 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final OrderValidationService orderValidationService;
-    private final OrderServiceClient orderServiceClient;
+    private final OrderServiceClient orderServiceClient; // محتفظين به للـ Validation أو كـ Backup
     private final List<PaymentStrategy> strategies;
+    private final StripeService stripeService;
+
+    // 1. إضافة KafkaTemplate لإرسال الرسائل
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    // اسم الـ Topic الموحد لأحداث الدفع
+    private static final String PAYMENT_TOPIC = "payment-events-topic";
+    private static final String NOTIFICATION_TOPIC = "send-notification";
 
     @Transactional
     public Object createPayment(PaymentRequest request, Authentication authentication) {
-        // Extract current user ID from authentication
         Long currentUserId = extractUserId(authentication);
-
-        // Validate order before proceeding with payment
         OrderDTO order = orderValidationService.validateOrderForPayment(request, currentUserId);
 
         return strategies.stream()
@@ -57,8 +59,7 @@ public class PaymentService {
         log.info("Processing refund for payment: {}", request.getPaymentId());
 
         Payment payment = paymentRepository.findByPaymentId(request.getPaymentId())
-                .orElseThrow(
-                        () -> new PaymentNotFoundException("Payment not found with ID: " + request.getPaymentId()));
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found with ID: " + request.getPaymentId()));
 
         if (payment.getStatus() != Payment.PaymentStatus.COMPLETED) {
             throw new PaymentProcessingException("Cannot refund payment with status: " + payment.getStatus());
@@ -70,112 +71,21 @@ public class PaymentService {
         }
 
         try {
-            // Use Stripe for refund if payment has Stripe Payment Intent ID
             if (payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty()) {
                 long amountInCents = StripeService.convertToCents(refundAmount);
-                stripeService.createRefund(payment.getStripePaymentIntentId(), amountInCents,
-                        "Customer requested refund");
-                log.info("Stripe refund created for payment: {}", request.getPaymentId());
+                stripeService.createRefund(payment.getStripePaymentIntentId(), amountInCents, "Customer requested refund");
             }
 
             payment.setStatus(Payment.PaymentStatus.REFUNDED);
             payment.setTransactionId("REF-" + payment.getTransactionId());
-
             Payment savedPayment = paymentRepository.save(payment);
-            log.info("Refund processed successfully for payment: {}", request.getPaymentId());
+
+            // 2. إرسال حدث Kafka عند استرداد المبلغ لتحديث حالة الأوردر في الخدمات الأخرى
+            sendPaymentEvent(savedPayment, "PAYMENT_REFUNDED");
 
             return paymentMapper.toResponse(savedPayment);
-
         } catch (StripeException e) {
-            log.error("Failed to process Stripe refund: {}", e.getMessage());
             throw new PaymentProcessingException("Failed to process refund: " + e.getMessage());
-        }
-    }
-
-    public PaymentResponse getPaymentByPaymentId(String paymentId) {
-        log.info("Fetching payment with ID: {}", paymentId);
-
-        Payment payment = paymentRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found with ID: " + paymentId));
-
-        // Sync status with Stripe if payment has Stripe Payment Intent
-        if (payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty()) {
-            try {
-                com.stripe.model.PaymentIntent stripeIntent = stripeService
-                        .retrievePaymentIntent(payment.getStripePaymentIntentId());
-                Payment.PaymentStatus newStatus = StripeService.mapStripeStatus(stripeIntent.getStatus());
-
-                if (newStatus != payment.getStatus()) {
-                    payment.setStatus(newStatus);
-                    payment = paymentRepository.save(payment);
-                    log.info("Payment status synced with Stripe - PaymentId: {}, NewStatus: {}", paymentId, newStatus);
-                }
-            } catch (StripeException e) {
-                log.warn("Failed to sync status with Stripe: {}", e.getMessage());
-            }
-        }
-
-        return paymentMapper.toResponse(payment);
-    }
-
-    public List<PaymentResponse> getPaymentsByOrderId(String orderId) {
-        log.info("Fetching payments for order: {}", orderId);
-        return mapPaymentsToResponse(paymentRepository.findByOrderId(orderId));
-    }
-
-    public List<PaymentResponse> getPaymentsByUserId(Long userId) {
-        log.info("Fetching payments for user: {}", userId);
-        return mapPaymentsToResponse(paymentRepository.findByUserId(userId));
-    }
-
-    public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
-        log.info("Fetching payments with status: {}", status);
-        return mapPaymentsToResponse(paymentRepository.findByStatus(status));
-    }
-
-    private List<PaymentResponse> mapPaymentsToResponse(List<Payment> payments) {
-        return payments.stream()
-                .map(paymentMapper::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    private Long extractUserId(Authentication authentication) {
-        try {
-            return Long.parseLong(authentication.getName());
-        } catch (NumberFormatException e) {
-            throw new PaymentProcessingException("Unable to extract user ID from authentication");
-        }
-    }
-
-    @Transactional
-    public PaymentResponse cancelPayment(String paymentId) {
-        log.info("Cancelling payment: {}", paymentId);
-
-        Payment payment = paymentRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new PaymentNotFoundException("Payment not found with ID: " + paymentId));
-
-        if (payment.getStatus() != Payment.PaymentStatus.PENDING) {
-            throw new PaymentProcessingException(
-                    "Only pending payments can be cancelled. Current status: " + payment.getStatus());
-        }
-
-        try {
-            // Cancel Stripe Payment Intent if exists
-            if (payment.getStripePaymentIntentId() != null && !payment.getStripePaymentIntentId().isEmpty()) {
-                stripeService.cancelPaymentIntent(payment.getStripePaymentIntentId());
-                log.info("Stripe Payment Intent cancelled: {}", payment.getStripePaymentIntentId());
-            }
-
-            payment.setStatus(Payment.PaymentStatus.CANCELLED);
-
-            Payment savedPayment = paymentRepository.save(payment);
-            log.info("Payment cancelled successfully: {}", paymentId);
-
-            return paymentMapper.toResponse(savedPayment);
-
-        } catch (StripeException e) {
-            log.error("Failed to cancel Stripe Payment Intent: {}", e.getMessage());
-            throw new PaymentProcessingException("Failed to cancel payment: " + e.getMessage());
         }
     }
 
@@ -184,113 +94,148 @@ public class PaymentService {
         log.info("Handling Stripe webhook - PaymentIntentId: {}, EventType: {}", stripePaymentIntentId, eventType);
 
         Payment payment = paymentRepository.findByStripePaymentIntentId(stripePaymentIntentId)
-                .orElseThrow(() -> new PaymentNotFoundException(
-                        "Payment not found with Stripe Payment Intent ID: " + stripePaymentIntentId));
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found ID: " + stripePaymentIntentId));
 
-        Payment.PaymentStatus newStatus = null;
-
-        switch (eventType) {
-            case "payment_intent.succeeded":
-                newStatus = Payment.PaymentStatus.COMPLETED;
-                break;
-            case "payment_intent.payment_failed":
-                newStatus = Payment.PaymentStatus.FAILED;
-                break;
-            case "payment_intent.canceled":
-                newStatus = Payment.PaymentStatus.CANCELLED;
-                break;
-            case "payment_intent.processing":
-                newStatus = Payment.PaymentStatus.PENDING;
-                break;
-            default:
-                log.warn("Unhandled Stripe event type: {}", eventType);
-                return;
-        }
+        Payment.PaymentStatus newStatus = determineNewStatus(eventType);
 
         if (newStatus != null && newStatus != payment.getStatus()) {
             payment.setStatus(newStatus);
             paymentRepository.save(payment);
 
-            log.info("Payment status updated - PaymentId: {}, NewStatus: {}", stripePaymentIntentId, newStatus);
-
-            // Update order status when payment is completed
-            if (newStatus == Payment.PaymentStatus.COMPLETED) {
-                try {
-                    OrderStatusUpdateRequest statusRequest = new OrderStatusUpdateRequest();
-                    statusRequest.setStatus(OrderDTO.OrderStatus.CONFIRMED);
-                    orderServiceClient.updateOrderStatus(payment.getOrderId(), statusRequest);
-                    log.info("Order status updated to CONFIRMED for orderId: {}", payment.getOrderId());
-                } catch (Exception e) {
-                    log.warn("Failed to update order status: {}", e.getMessage());
-                    // Don't fail the payment if order status update fails
-                }
-            }
+            // 3. بدلاً من استدعاء Feign Client مباشرة، نرسل Event
+            // هذا يجعل النظام Event-Driven ويقلل التبعية (Decoupling)
+            sendPaymentEvent(payment, "PAYMENT_STATUS_UPDATED");
+            
+            // Send notification to user
+            sendNotification(payment.getUserId().toString(), 
+                "Payment " + payment.getStatus() + " for Order #" + payment.getOrderId());
+            
+            log.info("Payment status updated and Kafka event sent - OrderId: {}, Status: {}", payment.getOrderId(), newStatus);
         }
     }
 
-    public Map<String, String> createStripePaymentIntent(Long amount, String currency, String orderId, Long userId,
-            Payment.PaymentMethod paymentMethod) {
+    // ميثود موحدة لإرسال أحداث الكافكا
+    private void sendPaymentEvent(Payment payment, String eventAction) {
+        Map<String, Object> eventPayload = new HashMap<>();
+        eventPayload.put("action", eventAction);
+        eventPayload.put("orderId", payment.getOrderId());
+        eventPayload.put("paymentId", payment.getPaymentId());
+        eventPayload.put("status", payment.getStatus().toString());
+        eventPayload.put("amount", payment.getAmount());
+        eventPayload.put("timestamp", java.time.LocalDateTime.now().toString());
+
+        kafkaTemplate.send(PAYMENT_TOPIC, payment.getOrderId(), eventPayload);
+    }
+
+    private Payment.PaymentStatus determineNewStatus(String eventType) {
+        return switch (eventType) {
+            case "payment_intent.succeeded" -> Payment.PaymentStatus.COMPLETED;
+            case "payment_intent.payment_failed" -> Payment.PaymentStatus.FAILED;
+            case "payment_intent.canceled" -> Payment.PaymentStatus.CANCELLED;
+            case "payment_intent.processing" -> Payment.PaymentStatus.PENDING;
+            default -> null;
+        };
+    }
+
+    // --- ميثودز المساعدة والتحميل تفضل كما هي ---
+
+    public PaymentResponse getPaymentByPaymentId(String paymentId) {
+        Payment payment = paymentRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found ID: " + paymentId));
+        return paymentMapper.toResponse(payment);
+    }
+
+    public List<PaymentResponse> getPaymentsByOrderId(String orderId) {
+        return mapPaymentsToResponse(paymentRepository.findByOrderId(orderId));
+    }
+
+    public List<PaymentResponse> getPaymentsByUserId(Long userId) {
+        return mapPaymentsToResponse(paymentRepository.findByUserId(userId));
+    }
+
+    private List<PaymentResponse> mapPaymentsToResponse(List<Payment> payments) {
+        return payments.stream().map(paymentMapper::toResponse).collect(Collectors.toList());
+    }
+
+    private Long extractUserId(Authentication authentication) {
+        return Long.parseLong(authentication.getName());
+    }
+    // 1. ميثود تأكيد الدفع (اللي موقفة الـ Build حالياً)
+    @Transactional
+    public void confirmStripePayment(String paymentIntentId, String orderId, String status, Authentication authentication) {
+        log.info("Confirming Stripe payment for Order: {} with status: {}", orderId, status);
+        
+        Payment payment = paymentRepository.findByStripePaymentIntentId(paymentIntentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found for Intent ID: " + paymentIntentId));
+
+        // تحديث الحالة بناءً على اللي جاي من الـ Frontend أو الـ Status
+        if ("succeeded".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status)) {
+            payment.setStatus(Payment.PaymentStatus.COMPLETED);
+        } else {
+            payment.setStatus(Payment.PaymentStatus.FAILED);
+        }
+        
+        paymentRepository.save(payment);
+        
+        // إرسال حدث لكافكا عشان الـ Order Service تعرف
+        sendPaymentEvent(payment, "PAYMENT_CONFIRMED");
+
+        // Send notification to user
+        sendNotification(payment.getUserId().toString(), 
+            "Payment confirmed for Order #" + payment.getOrderId());
+    }
+
+    private void sendNotification(String userId, String message) {
         try {
-            log.info("Creating Stripe Payment Intent - Amount: {}, OrderId: {}, UserId: {}, Method: {}",
-                    amount, orderId, userId, paymentMethod);
+            Map<String, Object> event = new HashMap<>();
+            event.put("userId", userId);
+            event.put("message", message);
+            event.put("type", "PAYMENT_UPDATE");
+            kafkaTemplate.send(NOTIFICATION_TOPIC, event);
+        } catch (Exception e) {
+            log.error("Failed to send notification for user {}", userId, e);
+        }
+    }
 
-            // Generate a unique payment ID
-            String paymentId = UUID.randomUUID().toString();
+    // 2. ميثود إلغاء الدفع (عشان ميعملش Error بعدها)
+    @Transactional
+    public PaymentResponse cancelPayment(String paymentId) {
+        Payment payment = paymentRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment not found"));
+        
+        payment.setStatus(Payment.PaymentStatus.CANCELLED);
+        Payment saved = paymentRepository.save(payment);
+        
+        sendPaymentEvent(saved, "PAYMENT_CANCELLED");
+        return paymentMapper.toResponse(saved);
+    }
 
-            // Use Stripe service to create payment intent
-            Map<String, String> stripeResponse = stripeService.createPaymentIntent(amount, currency, orderId, userId,
-                    paymentId);
+    // 3. ميثود جلب الدفعات بالحالة (عشان ميعملش Error بعدها)
+    public List<PaymentResponse> getPaymentsByStatus(Payment.PaymentStatus status) {
+        return mapPaymentsToResponse(paymentRepository.findByStatus(status));
+    }
 
-            // Create payment record in database with the real payment method
+    @Transactional
+    public Map<String, String> createStripePaymentIntent(Long amount, String currency, String orderId, Long userId,
+                                                        Payment.PaymentMethod paymentMethod) {
+        String paymentId = UUID.randomUUID().toString();
+        try {
+            Map<String, String> stripeResponse = stripeService.createPaymentIntent(amount, currency, orderId, userId, paymentId);
+            
             Payment payment = new Payment();
             payment.setPaymentId(paymentId);
             payment.setOrderId(orderId);
             payment.setUserId(userId);
-            payment.setAmount(java.math.BigDecimal.valueOf(amount / 100.0)); // Convert from cents to dollars
-            payment.setPaymentMethod(paymentMethod); // use the actual method, not the generic STRIPE value
+            payment.setAmount(java.math.BigDecimal.valueOf(amount / 100.0));
+            payment.setPaymentMethod(paymentMethod);
             payment.setStatus(Payment.PaymentStatus.PENDING);
             payment.setStripePaymentIntentId(stripeResponse.get("paymentIntentId"));
             payment.setTransactionId(stripeResponse.get("paymentIntentId"));
 
             paymentRepository.save(payment);
-
-            log.info("Payment Intent created successfully - PaymentId: {}, StripePaymentIntentId: {}",
-                    paymentId, stripeResponse.get("paymentIntentId"));
-
             return stripeResponse;
-
         } catch (Exception e) {
-            log.error("Failed to create Stripe Payment Intent: {}", e.getMessage());
             throw new PaymentProcessingException("Failed to create payment intent: " + e.getMessage());
         }
     }
-
-    public void confirmStripePayment(String paymentIntentId, String orderId, String status,
-            Authentication authentication) {
-        try {
-            log.info("Confirming Stripe payment - PaymentIntentId: {}, OrderId: {}, Status: {}",
-                    paymentIntentId, orderId, status);
-
-            // Find payment by Stripe Payment Intent ID
-            Payment payment = paymentRepository.findByStripePaymentIntentId(paymentIntentId)
-                    .orElseThrow(() -> new PaymentNotFoundException(
-                            "Payment not found with Payment Intent ID: " + paymentIntentId));
-
-            // Update payment status and order ID
-            Payment.PaymentStatus newStatus = "COMPLETED".equals(status) ? Payment.PaymentStatus.COMPLETED
-                    : Payment.PaymentStatus.FAILED;
-
-            payment.setStatus(newStatus);
-            payment.setOrderId(orderId); // Update with actual order ID
-            paymentRepository.save(payment);
-
-            log.info("Payment confirmed successfully - PaymentId: {}, OrderId: {}, Status: {}",
-                    payment.getId(), orderId, newStatus);
-
-        } catch (Exception e) {
-            log.error("Failed to confirm Stripe payment: {}", e.getMessage());
-            throw new PaymentProcessingException("Failed to confirm payment: " + e.getMessage());
-        }
-    }
-
 }

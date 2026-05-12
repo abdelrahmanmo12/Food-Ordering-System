@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8095
 
 spring:
   application:
@@ -153,7 +153,7 @@ spring:
         - id: owner-reports
           uri: lb://RESTAURANT-SERVICE
           predicates:
-            - Path=/owner/restaurants/**/reports/**
+            - Path=/owner/restaurants/*/reports/**
           filters:
             - AuthenticationFilter
 

@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import Btn from '../components/Button';
 import Badge from '../components/Badge';
-import PaymentManagement from '../components/PaymentManagement';
+
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +61,9 @@ function OwnerDashboard() {
   const [editOpen, setEditOpen] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [editItemOpen, setEditItemOpen] = useState(false);
+  const [addOfferOpen, setAddOfferOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("general"); // general, menu, orders, offers
 
   const [editForm, setEditForm] = useState({
     name: "", location: "", phone: "", description: "",
@@ -73,6 +76,7 @@ function OwnerDashboard() {
   const [categoryName, setCategoryName] = useState("");
   const [setupForm, setSetupForm] = useState({ name: "", location: "", phone: "", description: "", cuisine: "" });
   const [itemImage, setItemImage] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createRestaurant = useMutation({
@@ -135,6 +139,31 @@ function OwnerDashboard() {
     },
   });
 
+  const updateMenuItem = useMutation({
+    mutationFn: async (data) => {
+      // 1. Update data
+      const updated = await api.put(`/menu/${data.id}`, data);
+      
+      // 2. If new image selected, upload it
+      if (itemImage && data.id) {
+        const formData = new FormData();
+        formData.append("file", itemImage);
+        try {
+          await api.post(`/menu/${data.id}/image`, formData);
+        } catch (imgErr) {
+          console.error("Failed to upload menu item image:", imgErr);
+        }
+      }
+      return updated;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu"]);
+      setEditItemOpen(false);
+      setEditingItem(null);
+      setItemImage(null);
+    },
+  });
+
   // DELETE /menu/{id}
   const deleteMenuItem = useMutation({
     mutationFn: (itemId) => api.del(`/menu/${itemId}`),
@@ -146,6 +175,36 @@ function OwnerDashboard() {
     mutationFn: (catId) => api.del(`/menu/categories/${catId}`),
     onSuccess: () => queryClient.invalidateQueries(["categories"]),
   });
+
+  const { data: restaurantOffers = [] } = useQuery({
+    queryKey: ["offers", restaurant?.id],
+    queryFn: () => api.get(`/offers/restaurant/${restaurant.id}`),
+    enabled: !!restaurant?.id,
+  });
+
+  const addOffer = useMutation({
+    mutationFn: (data) => {
+      console.log("Creating offer for restaurant:", restaurant?.id, data);
+      return api.post(`/offers/restaurant/${restaurant.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["offers"]);
+      setAddOfferOpen(false);
+      setOfferForm({ title: "", description: "", discountPercentage: "", startDate: "", endDate: "" });
+      alert("Offer created successfully! 🎉");
+    },
+    onError: (err) => {
+      console.error("Offer creation failed:", err);
+      alert("Failed to create offer: " + (err.message || "Unknown error"));
+    }
+  });
+
+  const deleteOffer = useMutation({
+    mutationFn: (id) => api.del(`/offers/${id}`),
+    onSuccess: () => queryClient.invalidateQueries(["offers"]),
+  });
+
+  const [offerForm, setOfferForm] = useState({ title: "", description: "", discountPercentage: "", startDate: "", endDate: "" });
 
   // POST /restaurants/{id}/image  (multipart)
   const handleImageUpload = async (e) => {
@@ -207,189 +266,104 @@ function OwnerDashboard() {
   const r = restaurant;
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }}>
+      {/* Dashboard Sub-Navbar (Tabs) */}
+      <div style={{ 
+        display: "flex", 
+        gap: 8, 
+        marginBottom: 32, 
+        borderBottom: "1px solid var(--border)",
+        overflowX: "auto",
+        whiteSpace: "nowrap"
+      }}>
+        <TabBtn active={activeTab === "general"} onClick={() => setActiveTab("general")}>🏪 General</TabBtn>
+        <TabBtn active={activeTab === "menu"} onClick={() => setActiveTab("menu")}>🍴 Menu Management</TabBtn>
+        {r?.status === 'APPROVED' && (
+          <>
+            <TabBtn active={activeTab === "orders"} onClick={() => setActiveTab("orders")}>📦 Orders</TabBtn>
+            <TabBtn active={activeTab === "offers"} onClick={() => setActiveTab("offers")}>🎁 Offers</TabBtn>
+          </>
+        )}
+      </div>
 
-      {}
-      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 32, flexWrap: "wrap" }}>
+      {/* Tab Content */}
+      {activeTab === "general" && (
+        <OwnerInfo restaurant={r} onEdit={() => setEditOpen(true)} handleImageUpload={handleImageUpload} toggleStatus={toggleStatus} />
+      )}
 
-        {}
-        <label style={{ cursor: "pointer", position: "relative", flexShrink: 0 }}>
+      {activeTab === "menu" && (
+        <>
           <div style={{
-            width: 80, height: 80, borderRadius: "var(--radius)",
-            background: "var(--bg2)", border: "2px dashed var(--border)",
-            overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+            background: "var(--bg2)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)", marginBottom: 20, overflow: "hidden",
           }}>
-            {r.imageUrl
-              ? <img src={r.imageUrl} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <span style={{ fontSize: 28 }}>📷</span>
-            }
-          </div>
-          <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-          <div style={{
-            position: "absolute", bottom: 2, right: 2,
-            background: "var(--primary)", color: "#fff", borderRadius: "50%",
-            width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11,
-          }}>✎</div>
-        </label>
-
-        {}
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 8 }}>
-            {r.name}
-          </h1>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Badge color={(r.opened ?? r.isOpen) ? "var(--green)" : "var(--text3)"}>
-              {(r.opened ?? r.isOpen) ? "🟢 Open" : "🔴 Closed"}
-            </Badge>
-            {r.status && <Badge color="var(--amber)">{r.status}</Badge>}
-            {r.location && <Badge color="#5b8dd9">📍 {r.location}</Badge>}
-          </div>
-          {r.description && (
-            <p style={{ color: "var(--text2)", fontSize: 14, marginTop: 8, lineHeight: 1.5 }}>
-              {r.description}
-            </p>
-          )}
-        </div>
-
-        {}
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Btn
-            size="sm"
-            variant={(r.opened ?? r.isOpen) ? "danger" : "ghost"}
-            disabled={toggleStatus.isPending}
-            onClick={() => toggleStatus.mutate()}
-          >
-            {(r.opened ?? r.isOpen) ? "Close Restaurant" : "Open Restaurant"}
-          </Btn>
-          <Btn
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setEditForm({
-                name: r.name ?? "",
-                location: r.location ?? "",
-                phone: r.phone ?? "",
-                description: r.description ?? "",
-              });
-              setEditOpen(true);
-            }}
-          >
-            ✎ Edit Info
-          </Btn>
-        </div>
-      </div>
-
-      {}
-      <div style={{
-        background: "var(--bg2)", border: "1px solid var(--border)",
-        borderRadius: "var(--radius-lg)", marginBottom: 20, overflow: "hidden",
-      }}>
-        <div style={{
-          padding: "16px 24px", borderBottom: "1px solid var(--border)",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18 }}>
-            Categories
-          </h2>
-          <Btn size="sm" variant="ghost" onClick={() => setAddCategoryOpen(true)}>
-            + Add Category
-          </Btn>
-        </div>
-
-        {categories.length === 0 ? (
-          <div style={{ padding: "20px 24px", color: "var(--text2)", fontSize: 14 }}>
-            No categories yet — add one before adding menu items.
-          </div>
-        ) : (
-          <div style={{ padding: "12px 24px", display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {categories.map(cat => (
-              <div key={cat.id} style={{
-                display: "flex", alignItems: "center", gap: 6,
-                background: "var(--bg3)", border: "1px solid var(--border)",
-                borderRadius: 20, padding: "4px 12px",
-              }}>
-                <span style={{ fontSize: 13 }}>{cat.name}</span>
-                <button
-                  onClick={() => deleteCategory.mutate(cat.id)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", fontSize: 14, lineHeight: 1, padding: 0 }}
-                >✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {}
-      <div style={{
-        background: "var(--bg2)", border: "1px solid var(--border)",
-        borderRadius: "var(--radius-lg)", overflow: "hidden",
-      }}>
-        <div style={{
-          padding: "16px 24px", borderBottom: "1px solid var(--border)",
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18 }}>Menu Items</h2>
-          <Btn
-            size="sm"
-            onClick={() => setAddItemOpen(true)}
-            disabled={categories.length === 0}
-            title={categories.length === 0 ? "Add a category first" : ""}
-          >
-            + Add Item
-          </Btn>
-        </div>
-
-        {menuItems.length === 0 ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--text2)" }}>
-            {categories.length === 0
-              ? "Add a category above first, then add menu items."
-              : "No menu items yet — add your first item!"}
-          </div>
-        ) : (
-          <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-            {menuItems.map((item, i) => (
-              <div key={item.id} style={{
-                background: "var(--bg)", border: "1px solid var(--border)",
-                borderRadius: "var(--radius)", padding: "14px 20px",
-                display: "flex", alignItems: "center", gap: 14,
-                animation: `fadeUp 0.3s ${i * 0.04}s ease both`,
-              }}>
-                {item.imageUrl
-                  ? <img src={item.imageUrl} alt={item.name} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
-                  : <span style={{ fontSize: 32, flexShrink: 0 }}>🍽️</span>
-                }
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{item.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>
-                    {item.description}
-                    {item.stock != null && ` · Stock: ${item.stock}`}
+            <div style={{
+              padding: "16px 24px", borderBottom: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18 }}>Categories</h2>
+              <Btn size="sm" variant="ghost" onClick={() => setAddCategoryOpen(true)}>+ Add Category</Btn>
+            </div>
+            {categories.length === 0 ? (
+              <div style={{ padding: "20px 24px", color: "var(--text2)", fontSize: 14 }}>No categories yet.</div>
+            ) : (
+              <div style={{ padding: "12px 24px", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {categories.map(cat => (
+                  <div key={cat.id} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 20, padding: "4px 12px" }}>
+                    <span style={{ fontSize: 13 }}>{cat.name}</span>
+                    <button onClick={() => deleteCategory.mutate(cat.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", fontSize: 14, padding: 0 }}>✕</button>
                   </div>
-                  {item.discount > 0 && (
-                    <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 600 }}>
-                      {item.discount}% OFF
-                    </span>
-                  )}
-                </div>
-                <span style={{ color: "var(--amber)", fontWeight: 700, whiteSpace: "nowrap" }}>
-                  {item.price} EGP
-                </span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn variant="danger" size="sm" onClick={() => deleteMenuItem.mutate(item.id)}>
-                    Delete
-                  </Btn>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
 
-      {}
-      <OwnerOrders restaurant={r} />
+          <div style={{
+            background: "var(--bg2)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)", overflow: "hidden",
+          }}>
+            <div style={{
+              padding: "16px 24px", borderBottom: "1px solid var(--border)",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18 }}>Menu Items</h2>
+              <Btn size="sm" onClick={() => setAddItemOpen(true)} disabled={categories.length === 0}>+ Add Item</Btn>
+            </div>
+            {menuItems.length === 0 ? (
+              <div style={{ padding: 40, textAlign: "center", color: "var(--text2)" }}>No items yet.</div>
+            ) : (
+              <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                {menuItems.map((item, i) => (
+                  <div key={item.id} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8 }} /> : <span>🍽️</span>}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600 }}>{item.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--text3)" }}>{item.description}</div>
+                    </div>
+                    <span style={{ color: "var(--amber)", fontWeight: 700 }}>{item.price} EGP</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Btn variant="ghost" size="sm" onClick={() => { setEditingItem(item); setItemForm({ ...item, categoryId: item.categoryId }); setEditItemOpen(true); }}>Edit</Btn>
+                      <Btn variant="danger" size="sm" onClick={() => deleteMenuItem.mutate(item.id)}>Delete</Btn>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
-      {}
-      <OwnerPayments />
+      {activeTab === "orders" && r?.status === 'APPROVED' && <OwnerOrders restaurant={r} />}
+      
+      {activeTab === "offers" && r?.status === 'APPROVED' && (
+        <OwnerOffersSection 
+          offers={restaurantOffers} 
+          onAdd={() => setAddOfferOpen(true)} 
+          onDelete={(id) => deleteOffer.mutate(id)} 
+        />
+      )}
+
+
 
       {}
       {editOpen && (
@@ -480,6 +454,84 @@ function OwnerDashboard() {
           />
         </Modal>
       )}
+
+      {/* Edit Menu Item Modal */}
+      {editItemOpen && (
+        <Modal title="✎ Edit Menu Item" onClose={() => setEditItemOpen(false)}>
+          <Field label="Item Name *" value={itemForm.name}
+            onChange={v => setItemForm(f => ({ ...f, name: v }))} />
+          <Field label="Price (EGP) *" value={itemForm.price}
+            onChange={v => setItemForm(f => ({ ...f, price: v }))} type="number" />
+          <Field label="Description" value={itemForm.description}
+            onChange={v => setItemForm(f => ({ ...f, description: v }))} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Discount (%)" value={itemForm.discount}
+              onChange={v => setItemForm(f => ({ ...f, discount: v }))} type="number" />
+            <Field label="Stock" value={itemForm.stock}
+              onChange={v => setItemForm(f => ({ ...f, stock: v }))} type="number" />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Update Image (Optional)</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={e => setItemImage(e.target.files[0])}
+              style={{ ...inputStyle, background: "var(--bg2)", padding: '8px' }}
+            />
+            {itemImage && (
+              <div style={{ marginTop: 8, fontSize: 12, color: "var(--amber)" }}>
+                New selection: {itemImage.name}
+              </div>
+            )}
+          </div>
+
+          <ModalActions
+            onCancel={() => setEditItemOpen(false)}
+            onConfirm={() => {
+              if (!itemForm.name || !itemForm.price) return;
+              updateMenuItem.mutate({ ...itemForm, id: editingItem.id });
+            }}
+            loading={updateMenuItem.isPending}
+            label="Update Item"
+          />
+        </Modal>
+      )}
+      {/* Add Offer Modal */}
+      {addOfferOpen && (
+        <Modal title="🎁 Create New Offer" onClose={() => setAddOfferOpen(false)}>
+          <Field label="Offer Title *" value={offerForm.title}
+            onChange={v => setOfferForm(f => ({ ...f, title: v }))} placeholder="e.g. Summer Deal" />
+          <Field label="Description" value={offerForm.description}
+            onChange={v => setOfferForm(f => ({ ...f, description: v }))} placeholder="e.g. 20% off on all pizzas" />
+          <Field label="Discount Percentage (%) *" value={offerForm.discountPercentage}
+            onChange={v => setOfferForm(f => ({ ...f, discountPercentage: v }))} type="number" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Start Date" value={offerForm.startDate}
+              onChange={v => setOfferForm(f => ({ ...f, startDate: v }))} type="date" />
+            <Field label="End Date" value={offerForm.endDate}
+              onChange={v => setOfferForm(f => ({ ...f, endDate: v }))} type="date" />
+          </div>
+          <ModalActions
+            onCancel={() => setAddOfferOpen(false)}
+            onConfirm={() => {
+              console.log("Confirming offer creation:", offerForm);
+              if (!offerForm.title || !offerForm.discountPercentage) {
+                alert("Please fill in all required fields (Title and Discount %)");
+                return;
+              }
+              addOffer.mutate({
+                ...offerForm,
+                discountPercentage: parseFloat(offerForm.discountPercentage),
+                startDate: offerForm.startDate ? new Date(offerForm.startDate).toISOString() : null,
+                endDate: offerForm.endDate ? new Date(offerForm.endDate).toISOString() : null,
+              });
+            }}
+            loading={addOffer.isPending}
+            label="Create Offer"
+          />
+        </Modal>
+      )}
     </div>
   );
 }
@@ -487,43 +539,30 @@ function OwnerDashboard() {
 // ─── Owner Payments Section ───────────────────────────────────────────────────
 // Collapsible section that renders PaymentManagement inline on the owner page.
 
-function OwnerPayments() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ maxWidth: 900, margin: "32px auto 0" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "16px 20px", borderRadius: "var(--radius-lg)",
-          background: "var(--bg2)", border: "1px solid var(--border)",
-          cursor: "pointer", fontFamily: "'Playfair Display', serif",
-          fontSize: 18, fontWeight: 700, color: "var(--text1)",
-        }}
-      >
-        <span>💳 Payments</span>
-        <span style={{ fontSize: 20, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>▾</span>
-      </button>
-      {open && (
-        <div style={{
-          marginTop: 12, padding: "20px 0",
-          border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
-          background: "var(--bg2)", padding: "20px 16px",
-        }}>
-          <PaymentManagement />
-        </div>
-      )}
-    </div>
-  );
-}
+
 
 // ─── Reusable UI helpers ──────────────────────────────────────────────────────
 
-const labelStyle = {
-  display: "block", fontSize: 12, fontWeight: 600,
-  color: "var(--text2)", letterSpacing: "0.07em",
-  textTransform: "uppercase", marginBottom: 5,
-};
+const labelStyle = { display: "block", fontSize: 13, color: "var(--text3)", marginBottom: 6, fontWeight: 500 };
+
+function TabBtn({ children, active, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      background: active ? "var(--amber-glow)" : "transparent",
+      border: "none",
+      borderBottom: active ? "2px solid var(--amber)" : "2px solid transparent",
+      color: active ? "var(--amber)" : "var(--text2)",
+      padding: "12px 20px",
+      cursor: "pointer",
+      fontSize: 14,
+      fontWeight: 600,
+      transition: "all 0.2s",
+      marginBottom: -1
+    }}>
+      {children}
+    </button>
+  );
+}
 
 const inputStyle = {
   width: "100%", boxSizing: "border-box",
@@ -645,7 +684,7 @@ function OwnerOrders({ restaurant }) {
                         {new Date(order.createdAt || order.placedAt || Date.now()).toLocaleString('en-EG')}
                       </div>
                       <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 4 }}>
-                        Total: {order.totalAmount || order.total || 0} EGP
+                        Total: {order.totalPrice || order.totalAmount || order.total || 0} EGP
                       </div>
                       {(order.deliveryAddress) && (
                         <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 4 }}>
@@ -659,13 +698,13 @@ function OwnerOrders({ restaurant }) {
                   </div>
                   
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-                    {(order.status === "PLACED" || order.status === "PENDING" || order.status === "CONFIRMED") ? (
+                    {(['PLACED', 'PENDING', 'CONFIRMED'].includes(order.status?.toUpperCase())) ? (
                       <Btn size="sm" onClick={() => updateStatus.mutate({ orderId: order.orderNumber || order.id, status: "PREPARING" })} disabled={updateStatus.isPending}>
                          Mark Preparing
                       </Btn>
                     ) : null}
                     
-                    {order.status === "PREPARING" ? (
+                    {(order.status?.toUpperCase() === "PREPARING" || order.status?.toUpperCase() === "IN_PREPARATION") ? (
                       <Btn size="sm" onClick={() => updateStatus.mutate({ orderId: order.orderNumber || order.id, status: "READY" })} disabled={updateStatus.isPending}>
                          Mark Ready
                       </Btn>
@@ -676,6 +715,22 @@ function OwnerOrders({ restaurant }) {
                          Assign to Driver
                       </Btn>
                     ) : null}
+
+                    {/* Owner Cancel Button */}
+                    {!["OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "REJECTED"].includes(order.status?.toUpperCase()) && (
+                      <Btn 
+                        size="sm" 
+                        variant="danger" 
+                        onClick={() => {
+                          if (window.confirm("Cancel this order?")) {
+                            updateStatus.mutate({ orderId: order.orderNumber || order.id, status: "CANCELLED" });
+                          }
+                        }}
+                        disabled={updateStatus.isPending}
+                      >
+                        Cancel
+                      </Btn>
+                    )}
                   </div>
                 </div>
               ))}
@@ -738,6 +793,40 @@ function ModalActions({ onCancel, onConfirm, loading, label }) {
   );
 }
 
+function OwnerOffersSection({ offers, onAdd, onDelete }) {
+  return (
+    <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18 }}>Promotional Offers</h2>
+        <Btn size="sm" onClick={onAdd}>+ Create Offer</Btn>
+      </div>
+      {offers.length === 0 ? (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--text2)" }}>No active offers.</div>
+      ) : (
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          {offers.map(offer => (
+            <div key={offer.id} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{offer.title}</div>
+                <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 4 }}>{offer.description}</div>
+                <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                  <Badge color="var(--green)">{offer.discountPercentage}% OFF</Badge>
+                  {offer.endDate && (
+                    <span style={{ fontSize: 12, color: "var(--text3)" }}>
+                      Ends: {new Date(offer.endDate).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Btn variant="danger" size="sm" onClick={() => onDelete(offer.id)}>Delete</Btn>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AccessDenied() {
   const navigate = useNavigate();
   return (
@@ -746,6 +835,52 @@ function AccessDenied() {
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 12 }}>Access Denied</h2>
       <p style={{ color: "var(--text2)", marginBottom: 28 }}>You don't have permission to view this page.</p>
       <Btn onClick={() => navigate("/")}>Go Home</Btn>
+    </div>
+  );
+}
+
+function OwnerInfo({ restaurant, onEdit, handleImageUpload, toggleStatus }) {
+  const r = restaurant;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 32, flexWrap: "wrap" }}>
+      <label style={{ cursor: "pointer", position: "relative", flexShrink: 0 }}>
+        <div style={{
+          width: 80, height: 80, borderRadius: "var(--radius)",
+          background: "var(--bg2)", border: "2px dashed var(--border)",
+          overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {r.imageUrl
+            ? <img src={r.imageUrl} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <span style={{ fontSize: 28 }}>📷</span>
+          }
+        </div>
+        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+        <div style={{
+          position: "absolute", bottom: 2, right: 2,
+          background: "var(--primary)", color: "#fff", borderRadius: "50%",
+          width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11,
+        }}>✎</div>
+      </label>
+
+      <div style={{ flex: 1 }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 8 }}>{r.name}</h1>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Badge color={(r.opened ?? r.isOpen) ? "var(--green)" : "var(--text3)"}>
+            {(r.opened ?? r.isOpen) ? "🟢 Open" : "🔴 Closed"}
+          </Badge>
+          {r.status && <Badge color="var(--amber)">{r.status}</Badge>}
+          {r.location && <Badge color="#5b8dd9">📍 {r.location}</Badge>}
+        </div>
+        {r.description && <p style={{ color: "var(--text2)", fontSize: 14, marginTop: 8 }}>{r.description}</p>}
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <Btn size="sm" variant={(r.opened ?? r.isOpen) ? "danger" : "ghost"} disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate()}>
+          {(r.opened ?? r.isOpen) ? "Close Restaurant" : "Open Restaurant"}
+        </Btn>
+        <Btn size="sm" variant="ghost" onClick={onEdit}>✎ Edit Info</Btn>
+      </div>
     </div>
   );
 }

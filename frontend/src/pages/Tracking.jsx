@@ -45,7 +45,9 @@ const DRIVER_LABELS = {
 // ─── Step tracker ─────────────────────────────────────────────────────────────
 
 function StepTracker({ currentStatus }) {
-  const upper = currentStatus?.toUpperCase() ?? 'PLACED';
+  let upper = currentStatus?.toUpperCase() ?? 'PLACED';
+  if (upper === 'IN_PREPARATION') upper = 'PREPARING';
+  
   const isCancelled = upper === 'CANCELLED' || upper === 'REJECTED';
 
   const currentIdx = ORDER_STEPS.findIndex(s => s.key === upper);

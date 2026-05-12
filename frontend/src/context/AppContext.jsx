@@ -7,7 +7,9 @@
 
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from '../api/client'
+import { useCart } from './CartContext';
 
 const AppCtx = createContext()
 
@@ -22,6 +24,8 @@ export function AppProvider({ children }) {
   const [page, setPage] = useState("home");
   const toastTimer = useRef(null);
   const navigate = useNavigate();
+  const { clearCart } = useCart();
+  const queryClient = useQueryClient();
 
   // ── Restore session on mount ──────────────────────────────────────────────
   useEffect(() => {
@@ -145,9 +149,12 @@ export function AppProvider({ children }) {
     setRole("user");
     setOrders([]);
     setActiveOrder(null);
+    clearCart();
     localStorage.removeItem('auth-token');
     localStorage.removeItem('auth-refresh-token');
     localStorage.removeItem('auth-user');
+    localStorage.removeItem('food-ordering-favorites');
+    queryClient.clear(); 
     navigate("/");
     showToast("Logged out successfully");
   };

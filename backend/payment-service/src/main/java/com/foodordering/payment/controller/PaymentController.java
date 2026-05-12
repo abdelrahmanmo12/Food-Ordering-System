@@ -158,7 +158,7 @@ public class PaymentController {
         } catch (Exception e) {
             log.error("Error confirming payment: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to confirm payment"));
+                    .body(Map.of("error", "Failed to confirm payment: " + e.getMessage()));
         }
     }
 

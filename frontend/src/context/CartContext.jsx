@@ -8,6 +8,14 @@ export function CartProvider({ children }) {
 
   const addToCart = (restaurantId, item) => {
     const rest = RESTAURANTS.find(r => r.id === restaurantId);
+    
+    // Check if restaurant is closed (handling both mock data and potential API field names)
+    const isOpen = rest ? (rest.isOpen ?? rest.opened ?? true) : true;
+    if (!isOpen) {
+      alert("This restaurant is currently closed and not accepting orders.");
+      return;
+    }
+
     if (cart.length > 0 && cart[0].restaurantId !== restaurantId) {
       if (!window.confirm("Replace your current cart from another restaurant?")) return;
       setCart([]);

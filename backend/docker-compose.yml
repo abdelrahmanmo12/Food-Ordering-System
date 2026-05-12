@@ -8,7 +8,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: testdb
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -60,7 +60,7 @@ services:
     container_name: api-gateway
     entrypoint: [ "java", "-Deureka.client.serviceUrl.defaultZone=http://discovery-server:8761/eureka/", "-jar", "app.jar" ]
     ports:
-      - "8080:8080"
+      - "8095:8095"
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -136,7 +136,35 @@ services:
     networks:
       - food-ordering-network
 
-  # Payment Service
+  # 1. Zookeeper Service
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - food-ordering-network
+
+  # 2. Kafka Service
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - food-ordering-network
+
+  # 3. Payment Service
   payment-service:
     build:
       context: ./payment-service
@@ -144,7 +172,7 @@ services:
     container_name: payment-service
     entrypoint: [ "java", "-Deureka.client.serviceUrl.defaultZone=http://discovery-server:8761/eureka/", "-jar", "app.jar" ]
     ports:
-      - "8084:8082"
+      - "8082:8082"
     depends_on:
       mysql:
         condition: service_healthy
@@ -152,18 +180,26 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_started
+      kafka:
+        condition: service_started
     environment:
+      SPRING_APPLICATION_NAME: payment-service
+      SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://auth-service:8081/.well-known/jwks.json
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://auth-service:8081
-      STRIPE_SECRET_KEY: sk_test_51TNkmZLaPu9ajsblgH9mkHH3tgWrbSwN9yWYOWxXd9vjnG11rqNDurmZrE9428QBMxPFHOJ8p10vQof08g1wMHea00cnQNf6Z3
-      STRIPE_WEBHOOK_SECRET: whsec_e94e4d18b68de95456369b80948a9b3fe04a91ac8a2ad7c283cd38ae30f405c8
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: org.apache.kafka.common.serialization.StringSerializer
+      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.springframework.kafka.support.serializer.JsonSerializer
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      STRIPE_SECRET_KEY: sk_test_51TNkmnPturEXMFMXZddkaw1wlXIQkIM4WVZ6N8gBddU1PuFOWSXV5Uf68ktWC5I1eT23o4h9JsLcItiihGO5aAPz00ewuehlUJ
+      STRIPE_WEBHOOK_SECRET: whsec_8d770e365cf43b976c44885b510e21494284155ca107d611983ec93f2f8a295b
+      internal.gateway.secret: MySuperSecretKey123
     networks:
       - food-ordering-network
-
   # Order Service
   order-service:
     build:
@@ -179,8 +215,11 @@ services:
       discovery-server:
         condition: service_healthy
     environment:
-      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/order_db
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://Adelrhman_db:Password@cluster0.b2ezvqb.mongodb.net/order_db?retryWrites=true&w=majority
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_KAFKA_PRODUCER_KEY_SERIALIZER=org.apache.kafka.common.serialization.StringSerializer
+      - SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER=org.springframework.kafka.support.serializer.JsonSerializer
     networks:
       - food-ordering-network
 
@@ -225,6 +264,18 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    networks:
+      - food-ordering-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "9000:8080" # ستفتح الواجهة على هذا البورت
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
       - food-ordering-network
 

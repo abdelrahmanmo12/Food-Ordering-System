@@ -24,7 +24,7 @@ public class Offer {
     @NotBlank(message = "Title is required")
     private String title;
     private String description;
-    @NotBlank(message = "Discount percentage is required")
+    @jakarta.validation.constraints.NotNull(message = "Discount percentage is required")
     private Double discountPercentage;
     private Instant startDate;
     private Instant endDate;

@@ -4,7 +4,7 @@
 //   GET /orders/{id}                → fetch single order detail on expand
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
@@ -15,13 +15,15 @@ import OrderPaymentModal from '../components/OrderPaymentModal';
 const STATUS_COLORS = {
   PLACED:      { bg: '#eff6ff', color: '#2563eb' },
   CONFIRMED:   { bg: '#f0fdf4', color: '#16a34a' },
-  PREPARING:   { bg: '#fff7ed', color: '#f97316' },
-  READY:       { bg: '#fefce8', color: '#ca8a04' },
+  PREPARING:      { bg: '#fff7ed', color: '#f97316' },
+  IN_PREPARATION: { bg: '#fff7ed', color: '#f97316' },
+  READY:          { bg: '#fefce8', color: '#ca8a04' },
   PICKED_UP:   { bg: '#faf5ff', color: '#9333ea' },
   IN_TRANSIT:  { bg: '#faf5ff', color: '#9333ea' },
   DELIVERED:   { bg: '#f0fdf4', color: '#16a34a' },
   CANCELLED:   { bg: '#fef2f2', color: '#dc2626' },
   REJECTED:    { bg: '#fef2f2', color: '#dc2626' },
+  REFUNDED:    { bg: '#f3f4f6', color: '#374151' },
 };
 
 function StatusBadge({ status }) {
@@ -39,7 +41,7 @@ function StatusBadge({ status }) {
 
 // ─── Order card ───────────────────────────────────────────────────────────────
 
-function OrderCard({ order, onPayNow }) {
+function OrderCard({ order, onPayNow, onCancel }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
@@ -105,6 +107,23 @@ function OrderCard({ order, onPayNow }) {
             >
               Track Status
             </button>
+            {!['OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'REJECTED', 'REFUNDED'].includes(order.status?.toUpperCase()) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm('Are you sure you want to cancel this order?')) {
+                    onCancel(order.orderNumber || order.orderId || order.id);
+                  }
+                }}
+                style={{
+                  background: 'none', border: 'none', color: '#dc2626',
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  padding: '2px 4px', textDecoration: 'underline'
+                }}
+              >
+                Cancel Order
+              </button>
+            )}
           </div>
           {(order.status === 'PLACED' || order.status === 'PENDING') && (
             <button
@@ -137,8 +156,8 @@ function OrderCard({ order, onPayNow }) {
             </button>
           )}
           <div style={{ fontWeight: 700, color: '#111827', fontSize: 15 }}>
-            {order.totalAmount ?? order.total
-              ? `${(order.totalAmount ?? order.total).toFixed(2)} EGP`
+            {order.totalPrice ?? order.totalAmount ?? order.total
+              ? `${(order.totalPrice ?? order.totalAmount ?? order.total).toFixed(2)} EGP`
               : '—'}
           </div>
           <span style={{ color: '#9ca3af', fontSize: 18 }}>{expanded ? '▲' : '▼'}</span>
@@ -203,14 +222,37 @@ export default function Orders() {
     enabled: !!user,
     select: (data) => Array.isArray(data) ? data : data.content ?? [],
   });
+  
+  const cancelOrder = useMutation({
+    mutationFn: (orderId) => api.patch(`/api/orders/${orderId}/cancel`),
+    onSuccess: () => {
+      showToast('Order cancelled successfully', 'success');
+      refetch();
+    },
+    onError: (err) => showToast('Failed to cancel order: ' + err.message, 'error'),
+  });
 
   const orders = data ?? [];
 
-  const FILTERS = ['ALL', 'PLACED', 'PREPARING', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'];
+  const FILTERS = ['ALL', 'PLACED', 'PREPARING', 'READY', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'];
 
   const filtered = filter === 'ALL'
     ? orders
-    : orders.filter(o => o.status?.toUpperCase() === filter);
+    : orders.filter(o => {
+        const s = o.status?.toUpperCase();
+        console.log(`Order ${o.orderId || o.id} status: "${s}", Filter: "${filter}"`);
+        
+        if (filter === 'PLACED') {
+          return s === 'PLACED' || s === 'PENDING' || s === 'CONFIRMED';
+        }
+        if (filter === 'PREPARING') {
+          return s === 'PREPARING' || s === 'IN_PREPARATION';
+        }
+        if (filter === 'IN_TRANSIT') {
+          return s === 'IN_TRANSIT' || s === 'OUT_FOR_DELIVERY' || s === 'PICKED_UP';
+        }
+        return s === filter;
+      });
 
   if (!user) {
     return (
@@ -290,7 +332,12 @@ export default function Orders() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {filtered.map(order => (
-              <OrderCard key={order.orderId || order.id} order={order} onPayNow={setSelectedOrder} />
+              <OrderCard 
+              key={order.orderId || order.id} 
+              order={order} 
+              onPayNow={setSelectedOrder} 
+              onCancel={(id) => cancelOrder.mutate(id)}
+            />
             ))}
           </div>
         )}

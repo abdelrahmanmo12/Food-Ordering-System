@@ -4,6 +4,7 @@ import com.foodordering.restaurant.config.UserContext;
 import com.foodordering.restaurant.dtos.UserDTO;
 import com.foodordering.restaurant.models.Offer;
 import com.foodordering.restaurant.services.OfferService;
+import com.foodordering.restaurant.exceptions.UnauthorizedAccessException;
 
 import jakarta.validation.Valid;
 
@@ -21,9 +22,12 @@ public class OfferController {
     private OfferService offerService;
 
     @PostMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<Offer> createOffer(@PathVariable @Valid Long restaurantId,
-            @RequestBody Offer offer) {
+    public ResponseEntity<Offer> createOffer(@PathVariable Long restaurantId,
+            @RequestBody @Valid Offer offer) {
         UserDTO owner = UserContext.getUser();
+        if (owner == null) {
+            throw new UnauthorizedAccessException("User context not found");
+        }
         return ResponseEntity.status(201).body(offerService.createOffer(restaurantId, owner, offer));
     }
 
