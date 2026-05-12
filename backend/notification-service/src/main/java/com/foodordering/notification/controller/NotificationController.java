@@ -15,7 +15,7 @@ import java.util.Map;
  * Routes must be added to the gateway config (see notes below).
  */
 @RestController
-@RequestMapping("/notifications")
+@RequestMapping("/api/notifications")
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationController {
@@ -27,7 +27,7 @@ public class NotificationController {
      * Returns all notifications for the authenticated user.
      * Header: X-User-Id (injected by API Gateway from JWT)
      */
-    @GetMapping
+    @GetMapping("/my-notifications")
     public ResponseEntity<List<NotificationResponse>> getMyNotifications(
             @RequestHeader("X-User-Id") String userId) {
         log.info("GET /notifications for userId={}", userId);
@@ -70,7 +70,7 @@ public class NotificationController {
      * PATCH /notifications/read-all
      * Marks all user notifications as read.
      */
-    @PatchMapping("/read-all")
+    @PatchMapping("/mark-as-read")
     public ResponseEntity<Map<String, String>> markAllAsRead(
             @RequestHeader("X-User-Id") String userId) {
         notificationService.markAllAsRead(userId);

@@ -1,4 +1,6 @@
 package com.foodordering.order.abstracts;
+import com.foodordering.order.entity.Order; 
+
 
 import com.foodordering.order.DTOs.*;
 import com.foodordering.order.entity.OrderStatus;
@@ -28,4 +30,6 @@ public interface OrderService {
 
     List<RestaurantOrderResponse> getOrdersByRestaurant(Long restaurantId,UserDTO user);
     OrderTrackingResponse trackOrder(String orderNumber);
+    
+    void handlePostPayment(Order order);
 }

@@ -22,41 +22,53 @@ public class NotificationConsumer {
      */
     @KafkaListener(
             topics = "${kafka.topics.user-registered}",
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "userRegisteredKafkaListenerContainerFactory"
+            groupId = "${spring.kafka.consumer.group-id}"
     )
-    public void consumeUserRegistered(UserRegisteredEvent event) {
-        log.info("[KAFKA] Received UserRegisteredEvent: userId={}, email={}, role={}",
-                event.getUserId(), event.getEmail(), event.getRole());
+    public void consumeUserRegistered(java.util.Map<String, Object> eventData) {
+        log.info("[KAFKA] Received UserRegisteredEvent: {}", eventData);
+        UserRegisteredEvent event = new UserRegisteredEvent();
+        event.setUserId(String.valueOf(eventData.get("userId")));
+        event.setEmail((String) eventData.get("email"));
+        event.setRole((String) eventData.get("role"));
         notificationService.handleUserRegistered(event);
     }
 
-    /**
-     * Listens on topic: order-placed
-     * Published by: order-service after order is created
-     */
     @KafkaListener(
             topics = "${kafka.topics.order-placed}",
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "orderPlacedKafkaListenerContainerFactory"
+            groupId = "${spring.kafka.consumer.group-id}"
     )
-    public void consumeOrderPlaced(OrderPlacedEvent event) {
-        log.info("[KAFKA] Received OrderPlacedEvent: orderId={}, userId={}, total={}",
-                event.getOrderId(), event.getUserId(), event.getTotalPrice());
+    public void consumeOrderPlaced(java.util.Map<String, Object> eventData) {
+        log.info("[KAFKA] Received OrderPlacedEvent: {}", eventData);
+        OrderPlacedEvent event = new OrderPlacedEvent();
+        event.setOrderId(String.valueOf(eventData.get("orderId")));
+        event.setUserId(String.valueOf(eventData.get("userId")));
+        event.setTotalPrice(Double.parseDouble(String.valueOf(eventData.get("totalPrice"))));
         notificationService.handleOrderPlaced(event);
     }
 
-    /**
-     * Listens on topic: send-notification
-     * Published by: any service needing to send a general notification
-     */
     @KafkaListener(
             topics = "send-notification",
             groupId = "${spring.kafka.consumer.group-id}"
     )
-    public void consumeNotification(NotificationEvent event) {
-        log.info("[KAFKA] Received NotificationEvent: userId={}, type={}",
-                event.getUserId(), event.getType());
-        notificationService.handleGeneralNotification(event);
+    public void consumeNotification(java.util.Map<String, Object> eventData) {
+        log.info("[KAFKA] Received NotificationEvent data: {}", eventData);
+        
+        try {
+            NotificationEvent event = new NotificationEvent();
+            Object userIdObj = eventData.get("userId");
+            if (userIdObj == null) {
+                log.error("[KAFKA] userId is missing in NotificationEvent!");
+                return;
+            }
+            
+            event.setUserId(String.valueOf(userIdObj));
+            event.setMessage((String) eventData.get("message"));
+            event.setType((String) eventData.get("type"));
+            
+            log.info("[KAFKA] Processing notification for userId: {}, type: {}", event.getUserId(), event.getType());
+            notificationService.handleGeneralNotification(event);
+        } catch (Exception e) {
+            log.error("[KAFKA] Error processing NotificationEvent: {}", e.getMessage(), e);
+        }
     }
 }

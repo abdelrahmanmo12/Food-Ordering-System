@@ -1,8 +1,9 @@
-package com.foodordering.order.service.messaging;
+package com.foodordering.order.messaging;
 
 import com.foodordering.order.entity.Order;
-import com.foodordering.order.entity.OrderStatus; // ✅ الـ Enum المطلوب
+import com.foodordering.order.entity.OrderStatus;
 import com.foodordering.order.repositories.OrderRepository;
+import com.foodordering.order.abstracts.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class PaymentConsumer {
 
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
     // استماع للـ Topic الخاص بأحداث الدفع
     @KafkaListener(topics = "payment-events-topic", groupId = "order-service-group")
@@ -32,11 +34,14 @@ public class PaymentConsumer {
 
             log.info("Processing {} for Order ID: {} with Payment Status: {}", action, orderId, status);
 
-            // البحث عن الأوردر وتحديث حالته في MongoDB
+            // البحث عن الأوردر وتحديث حالته
             orderRepository.findById(orderId).ifPresentOrElse(order -> {
                 updateOrderStatus(order, status);
                 orderRepository.save(order);
                 log.info("Order {} successfully updated to {}", orderId, order.getStatus());
+                
+                // Notify customer and owner
+                orderService.handlePostPayment(order);
             }, () -> log.error("Order not found with ID: {}", orderId));
 
         } catch (Exception e) {
@@ -45,17 +50,16 @@ public class PaymentConsumer {
     }
 
     private void updateOrderStatus(Order order, String paymentStatus) {
-        // تحويل الـ String القادم من Kafka إلى الـ Enum الخاص بالـ Order
         switch (paymentStatus) {
             case "COMPLETED":
-                order.setStatus(OrderStatus.CONFIRMED); // ✅ استخدام الـ Enum مباشرة
+                order.setStatus(OrderStatus.PAID); // ✅ Changed from CONFIRMED to PAID
                 break;
             case "FAILED":
             case "CANCELLED":
-                order.setStatus(OrderStatus.CANCELLED); // ✅ استخدام الـ Enum مباشرة
+                order.setStatus(OrderStatus.CANCELLED);
                 break;
             case "REFUNDED":
-                order.setStatus(OrderStatus.REFUNDED); // ✅ استخدام الـ Enum مباشرة
+                order.setStatus(OrderStatus.REFUNDED);
                 break;
             default:
                 log.warn("Unknown payment status received: {}. No status change made.", paymentStatus);

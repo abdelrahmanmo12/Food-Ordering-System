@@ -21,9 +21,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j; // تأكد من صحة هذا السطر
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepo;
@@ -86,6 +88,8 @@ public class OrderServiceImpl implements OrderService {
         sendKafkaEvent(savedOrder);
 
         sendNotificationSafe(Long.valueOf(order.getCustomerId()), order.getOrderNumber(), getStatusMessage(order.getStatus()));        
+        notifyOwner(savedOrder, "New order #" + savedOrder.getOrderNumber() + " received! Waiting for payment.");
+        
         return new OrderCreationResponse(order.getId(), "Order placed successfully");
     }
 
@@ -130,6 +134,7 @@ public class OrderServiceImpl implements OrderService {
         sendKafkaEvent(savedOrder);
 
         sendNotificationSafe(Long.valueOf(order.getCustomerId()), order.getOrderNumber(), getStatusMessage(order.getStatus()));
+        notifyOwner(savedOrder, "New order #" + savedOrder.getOrderNumber() + " received via checkout! Waiting for payment.");
         return map(order);
     }
 
@@ -331,11 +336,13 @@ public class OrderServiceImpl implements OrderService {
     private String getStatusMessage(OrderStatus status) {
         switch (status) {
             case PENDING: return "Order received! Waiting for payment confirmation.";
+            case PAID: return "Payment confirmed! Waiting for restaurant to confirm your order.";
             case CONFIRMED: return "Order confirmed! Restaurant is preparing your order.";
             case PREPARING: return "Your order is being prepared by the restaurant.";
             case OUT_FOR_DELIVERY: return "Your order is on the way! Driver is heading to you.";
             case DELIVERED: return "Order delivered! Enjoy your meal.";
             case CANCELLED: return "Your order has been cancelled.";
+            case CREATED: return "Order created! Preparing for checkout.";
             default: return "Unknown status.";
         }
     }
@@ -365,18 +372,21 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
-    private OrderDTO.OrderStatus convertToOrderDTOStatus(OrderStatus orderStatus) {
-        return switch (orderStatus) {
-            case PENDING -> OrderDTO.OrderStatus.PENDING;
-            case CONFIRMED -> OrderDTO.OrderStatus.CONFIRMED;
-            case PREPARING -> OrderDTO.OrderStatus.PREPARING;
-            case OUT_FOR_DELIVERY -> OrderDTO.OrderStatus.OUT_FOR_DELIVERY;
-            case DELIVERED -> OrderDTO.OrderStatus.DELIVERED;
-            case CANCELLED -> OrderDTO.OrderStatus.CANCELLED;
-            case READY -> OrderDTO.OrderStatus.READY;
-            case REFUNDED -> OrderDTO.OrderStatus.REFUNDED;
-        };
-    }
+   private OrderDTO.OrderStatus convertToOrderDTOStatus(OrderStatus orderStatus) {
+    return switch (orderStatus) {
+        case PENDING -> OrderDTO.OrderStatus.PENDING;
+        case CONFIRMED -> OrderDTO.OrderStatus.CONFIRMED;
+        case PREPARING -> OrderDTO.OrderStatus.PREPARING;
+        case OUT_FOR_DELIVERY -> OrderDTO.OrderStatus.OUT_FOR_DELIVERY;
+        case DELIVERED -> OrderDTO.OrderStatus.DELIVERED;
+        case CANCELLED -> OrderDTO.OrderStatus.CANCELLED;
+        case READY -> OrderDTO.OrderStatus.READY;
+        case REFUNDED -> OrderDTO.OrderStatus.REFUNDED;
+        case PAID -> OrderDTO.OrderStatus.PAID;
+        case CREATED -> OrderDTO.OrderStatus.CREATED;
+        default -> throw new IllegalArgumentException("Unknown order status: " + orderStatus);
+    };
+}
 
     private void validateRestaurant(RestaurantDTO restaurant, String identifier) {
         if (restaurant == null) throw new RestaurantNotFoundException(identifier);
@@ -392,9 +402,35 @@ public class OrderServiceImpl implements OrderService {
                     .type("ORDER_UPDATE")
                     .build();
             kafkaTemplate.send(NOTIFICATION_TOPIC, event);
-            log.info("Sent Kafka notification event for order {}", orderNumber);
+            log.info("Sent Kafka notification event for userId {} regarding order {}", userId, orderNumber);
         } catch (Exception e) {
             log.error("Failed to send Kafka notification for order {}", orderNumber, e);
+        }
+    }
+
+    private void notifyOwner(Order order, String message) {
+        try {
+            // Get restaurant owner ID
+            var restaurant = restaurantClient.getById(order.getRestaurantId());
+            if (restaurant != null && restaurant.getOwnerId() != null) {
+                sendNotificationSafe(restaurant.getOwnerId(), order.getOrderNumber(), message);
+                log.info("Notified owner {} for order {}", restaurant.getOwnerId(), order.getOrderNumber());
+            } else {
+                log.warn("Could not find owner for restaurant {}", order.getRestaurantId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to notify owner for order {}", order.getOrderNumber(), e);
+        }
+    }
+
+    @Override
+    public void handlePostPayment(Order order) {
+        // Send notification to customer
+        sendNotificationSafe(Long.valueOf(order.getCustomerId()), order.getOrderNumber(), getStatusMessage(order.getStatus()));
+        
+        // Notify owner about payment
+        if (order.getStatus() == OrderStatus.PAID) {
+            notifyOwner(order, "Order #" + order.getOrderNumber() + " has been PAID! Please confirm it to start preparation.");
         }
     }
 }

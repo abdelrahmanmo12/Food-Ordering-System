@@ -32,6 +32,8 @@ public class OrderDTO {
         OUT_FOR_DELIVERY,
         DELIVERED,
         CANCELLED,
-        REFUNDED
+        REFUNDED,
+        PAID,
+        CREATED
     }
 }

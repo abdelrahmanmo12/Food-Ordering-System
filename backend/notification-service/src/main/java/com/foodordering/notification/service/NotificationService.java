@@ -66,15 +66,20 @@ public class NotificationService {
     public void handleGeneralNotification(NotificationEvent event) {
         log.info("Handling NotificationEvent for userId={}, type={}", event.getUserId(), event.getType());
 
+        Notification.NotificationType type = Notification.NotificationType.GENERAL;
+        if ("ORDER_UPDATE".equals(event.getType())) {
+            type = Notification.NotificationType.ORDER_UPDATE;
+        }
+
         Notification notification = Notification.builder()
                 .userId(event.getUserId())
-                .type(Notification.NotificationType.GENERAL)
+                .type(type)
                 .message(event.getMessage())
                 .isRead(false)
                 .build();
 
         notificationRepository.save(notification);
-        log.info("Saved GENERAL notification for userId={}", event.getUserId());
+        log.info("Saved {} notification for userId={}", type, event.getUserId());
     }
 
     // ─── REST API Methods ──────────────────────────────────────────────────────

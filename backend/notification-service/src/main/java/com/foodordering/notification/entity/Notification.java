@@ -43,6 +43,8 @@ public class Notification {
     public enum NotificationType {
         USER_REGISTERED,
         ORDER_PLACED,
-        GENERAL
+        ORDER_UPDATE,
+        GENERAL,
+        CREATED
     }
 }
